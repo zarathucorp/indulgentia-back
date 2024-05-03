@@ -1,4 +1,4 @@
-from env import SUPABASE_URL, SUPABASE_ANON_KEY
+from env import SUPABASE_URL, SUPABASE_KEY
 from supabase import create_client, Client
 
 url: str = SUPABASE_URL
