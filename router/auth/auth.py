@@ -1,3 +1,4 @@
+
 import os
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends, HTTPException, status, Security, APIRouter, Request, Cookie
@@ -11,7 +12,18 @@ from database import supabase, schemas, crud
 
 load_dotenv()
 
+
 router = APIRouter(
     prefix="/auth",
     responses={404: {"description": "Not found"}},
 )
+
+
+@router.post("/login")
+def login():
+    pass
+
+
+@router.post("/join")
+def join():
+    pass
