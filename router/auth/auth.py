@@ -1,4 +1,3 @@
-
 import os
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends, HTTPException, status, Security, APIRouter, Request, Cookie
@@ -8,7 +7,9 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import jwt
 
-from database import supabase, schemas, crud
+from database import schemas, crud
+
+
 
 load_dotenv()
 
@@ -19,11 +20,31 @@ router = APIRouter(
 )
 
 
-@router.post("/login")
+@router.get("/join")
+def join(request: Request):
+    # NewUser = schemas.UserCreate(
+    #     email="foo@bar.com",
+    #     password="foobar",
+    # )
+    NewUser = schemas.UserCreate(
+        email="koolerjaebee@gmail.com",
+        password="1q2w3e$r",
+    )
+
+    res = crud.create_user(NewUser)
+    return res
+
+
+@router.get("/login")
 def login():
     pass
 
 
-@router.post("/join")
-def join():
+@router.get("/logout")
+def logout():
+    pass
+
+
+@router.get("/drop")
+def drop():
     pass

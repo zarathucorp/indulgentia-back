@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Union, Optional, Any
-from datetime import datetime
+from datetime import datetime, date
 
 
 class AllOptional(BaseModel):
@@ -19,7 +19,7 @@ class UserBase(BaseModel):
     email: str
     sign_route: Optional[str] = None
     billing_key: Optional[str] = None
-    billing_expired_at: Optional[datetime] = None
+    billing_expired_at: Optional[date] = None
 
 class UserCreate(UserBase):
     password: str
