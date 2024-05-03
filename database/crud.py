@@ -24,7 +24,7 @@ def create_user(user: schemas.UserCreate):
         print(auth_response)
         return JSONResponse(status_code=200, content={
             "status": "success", "message": "User created successfully",
-            "data": auth_response.user.model_dump()
+            "user": auth_response.user.model_dump()
                 })
     except AuthApiError as message:
         print('='*120)
