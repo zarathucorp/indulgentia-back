@@ -1,29 +1,16 @@
-
 import os
+from database.supabase import supabase
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends, HTTPException, status, Security, APIRouter, Request, Cookie
 from fastapi.responses import JSONResponse
 from typing import Annotated, List
 from pydantic import BaseModel
-from dotenv import load_dotenv
-import jwt
 
-from database import supabase, schemas, crud
-
-load_dotenv()
+from database import schemas, crud
 
 
 router = APIRouter(
-    prefix="/auth",
+    prefix="/research",
     responses={404: {"description": "Not found"}},
 )
 
-
-@router.post("/login")
-def login():
-    pass
-
-
-@router.post("/join")
-def join():
-    pass
