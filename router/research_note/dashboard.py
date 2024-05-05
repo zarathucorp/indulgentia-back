@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-import project
-import bucket
-import note
+from . import project
+from . import bucket
+from . import note
 router = APIRouter(
     prefix="/dashboard",
     responses={404: {"description": "Not found"}},
