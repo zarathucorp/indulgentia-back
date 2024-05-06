@@ -9,6 +9,7 @@ import secrets
 from datetime import datetime, timedelta
 from database.supabase import supabase
 from gotrue.errors import AuthApiError
+from env import SUPABASE_URL
 
 load_dotenv()
 
@@ -44,9 +45,15 @@ def verify_user(req: Request):
     from fastapi import HTTPException
     SUPABASE_URL_REFERENCE_ID = SUPABASE_URL.replace(
         "https://", "").replace(".supabase.co", "")
-    print(SUPABASE_URL_REFERENCE_ID)
+
+    # ID/PW 로그인은 여기서 걸러짐
     SUPABASE_COOKIE = req.cookies.get(
         f"sb-{SUPABASE_URL_REFERENCE_ID}-auth-token")
+    # Google 로그인은 여기서 걸러짐
+    if SUPABASE_COOKIE is None:
+        SUPABASE_COOKIE = req.cookies.get(
+            f"sb-{SUPABASE_URL_REFERENCE_ID}-auth-token.0")
+
     SUPABASE_COOKIE_DICT = json.loads(urllib.parse.unquote(
         SUPABASE_COOKIE))
     access_token = SUPABASE_COOKIE_DICT["access_token"]
