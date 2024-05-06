@@ -46,19 +46,30 @@ def verify_user(req: Request):
     SUPABASE_URL_REFERENCE_ID = SUPABASE_URL.replace(
         "https://", "").replace(".supabase.co", "")
 
-    # ID/PW 로그인은 여기서 걸러짐
+    # ID/PW 로그인은 여기서 처리
     SUPABASE_COOKIE = req.cookies.get(
         f"sb-{SUPABASE_URL_REFERENCE_ID}-auth-token")
-    # Google 로그인은 여기서 걸러짐
+    # Cookie가 길어서 0, 1로 나누어진 경우도 있음.
     if SUPABASE_COOKIE is None:
-        SUPABASE_COOKIE = req.cookies.get(
-            f"sb-{SUPABASE_URL_REFERENCE_ID}-auth-token.0")
+        SUPABASE_COOKIE = ""
+        while True:
+            cookie_order = 0
+            if req.cookies.get(f"sb-{SUPABASE_URL_REFERENCE_ID}-auth-token.{cookie_order}") is None:
+                break
+            SUPABASE_COOKIE = SUPABASE_COOKIE + req.cookies.get(
+                f"sb-{SUPABASE_URL_REFERENCE_ID}-auth-token.{cookie_order}")
+            cookie_order += 1
+
+    # 쿠키 없는경우 Exception
+    if (SUPABASE_COOKIE is None) | (SUPABASE_COOKIE == ""):
+        print("쿠키 없음")
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
     SUPABASE_COOKIE_DICT = json.loads(urllib.parse.unquote(
         SUPABASE_COOKIE))
-    access_token = SUPABASE_COOKIE_DICT["access_token"]
+    access_token = SUPABASE_COOKIE_DICT.get("access_token")
     try:
-        data = supabase.auth.get_user(access_token + "1")
+        data = supabase.auth.get_user(access_token)
         user = data.user
         return user.id
     except AuthApiError:
