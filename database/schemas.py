@@ -1,18 +1,18 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, UUID4
 from typing import List, Union, Optional, Any
 from datetime import datetime, date
 
 
-class AllOptional(BaseModel):
-    @classmethod
-    def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
-        super().__pydantic_init_subclass__(**kwargs)
+# class AllOptional(BaseModel):
+#     @classmethod
+#     def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
+#         super().__pydantic_init_subclass__(**kwargs)
 
-        for field in cls.model_fields.values():
-            if field.is_required():
-                field.default = None
+#         for field in cls.model_fields.values():
+#             if field.is_required():
+#                 field.default = None
 
-        cls.model_rebuild(force=True)
+#         cls.model_rebuild(force=True)
 
 
 class UserBase(BaseModel):
@@ -24,8 +24,12 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
-class UserGet(UserBase, AllOptional):
-    id: int
+class UserUpdate(UserBase):
+    id: UUID4
+    password: str
+
+class User(UserBase):
+    id: UUID4
     created: datetime
     last_signin: datetime
 
@@ -36,20 +40,23 @@ class UserGet(UserBase, AllOptional):
         return result
 
 
-class ResearchBase(BaseModel):
+class ProjectBase(BaseModel):
+    PI_id: UUID4
     title: str
     grant_number: str
     isRemovable: bool = True
     isDownloadable: bool = True
 
-class ResearchCreate(ResearchBase):
+class ProjectCreate(ProjectBase):
     pass
 
-class ResearchGet(ResearchBase, AllOptional):
-    id: int
-    PI_id: int
-    created_at: datetime
-    updated_at: datetime
+class ProjectUpdate(ProjectBase):
+    id: UUID4
+
+class Project(ProjectBase):
+    id: UUID4
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
 
     def to_dict(self):
         result = self.__dict__
@@ -58,27 +65,30 @@ class ResearchGet(ResearchBase, AllOptional):
         return result
     
 
-class UserResearchBase(BaseModel):
-    user_id: int
-    research_id: int
+class UserProjectBase(BaseModel):
+    user_id: UUID4
+    project_id: str
 
-class UserResearchCreate(UserResearchBase):
+class UserProjectCreate(UserProjectBase):
     pass
 
-class UserResearchGet(UserResearchBase, AllOptional):
-    id: int
+class UserProject(UserProjectBase):
+    id: UUID4
 
 
 
 class GitrepoBase(BaseModel):
-    research_id: int
+    research_id: UUID4
     repo_url: str
 
 class GitrepoCreate(GitrepoBase):
     pass
 
-class GitrepoGet(GitrepoBase, AllOptional):
-    id: int
+class GitrepoUpdate(GitrepoBase):
+    id: UUID4
+
+class Gitrepo(GitrepoBase):
+    id: UUID4
     created_at: datetime
     updated_at: datetime
 
@@ -89,16 +99,20 @@ class GitrepoGet(GitrepoBase, AllOptional):
         return result
 
 
-class NotebookBase(BaseModel):
-    research_id: int
+class BucketBase(BaseModel):
+    project_id: UUID4
+    user_id: UUID4
     title: str
     isDefault: bool = False
 
-class NotebookCreate(NotebookBase):
+class BucketCreate(BucketBase):
     pass
 
-class NotebookGet(NotebookBase, AllOptional):
-    id: int
+class BucketUpdate(BucketBase):
+    id: UUID4
+
+class Bucket(BucketBase):
+    id: UUID4
     created_at: datetime
     updated_at: datetime
 
@@ -110,16 +124,20 @@ class NotebookGet(NotebookBase, AllOptional):
     
 
 class NoteBase(BaseModel):
-    user_id: int
-    notebook_id: int
+    user_id: UUID4
+    bucket_id: UUID4
     title: str
     isGitrepo: bool = False
 
 class NoteCreate(NoteBase):
     file_name: str
 
-class NoteGet(NoteBase, AllOptional):
-    id: int
+class NoteUpdate(NoteBase):
+    id: UUID4
+    file_name: str
+
+class Note(NoteBase):
+    id: UUID4
     created_at: datetime
     updated_at: datetime
     file_source_name: str

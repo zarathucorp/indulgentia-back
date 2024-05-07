@@ -1,4 +1,3 @@
-from router.research_note import dashboard
 import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -8,7 +7,7 @@ import uvicorn
 
 from router.auth import auth
 from router.admin import admin
-
+from router.dashboard import dashboard
 
 load_dotenv(verbose=True)
 
