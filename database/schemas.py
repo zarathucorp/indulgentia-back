@@ -25,7 +25,7 @@ class UserCreate(UserBase):
     password: str
 
 class UserGet(UserBase, AllOptional):
-    id: int
+    id: str
     created: datetime
     last_signin: datetime
 
@@ -36,18 +36,18 @@ class UserGet(UserBase, AllOptional):
         return result
 
 
-class ResearchBase(BaseModel):
+class ProjectBase(BaseModel):
     title: str
     grant_number: str
     isRemovable: bool = True
     isDownloadable: bool = True
 
-class ResearchCreate(ResearchBase):
+class ProjectCreate(ProjectBase):
     pass
 
-class ResearchGet(ResearchBase, AllOptional):
-    id: int
-    PI_id: int
+class ProjectGet(ProjectBase, AllOptional):
+    id: str
+    PI_id: str
     created_at: datetime
     updated_at: datetime
 
@@ -58,27 +58,27 @@ class ResearchGet(ResearchBase, AllOptional):
         return result
     
 
-class UserResearchBase(BaseModel):
-    user_id: int
-    research_id: int
+class UserProjectBase(BaseModel):
+    user_id: str
+    research_id: str
 
-class UserResearchCreate(UserResearchBase):
+class UserProjectCreate(UserProjectBase):
     pass
 
-class UserResearchGet(UserResearchBase, AllOptional):
-    id: int
+class UserProjectGet(UserProjectBase, AllOptional):
+    id: str
 
 
 
 class GitrepoBase(BaseModel):
-    research_id: int
+    research_id: str
     repo_url: str
 
 class GitrepoCreate(GitrepoBase):
     pass
 
 class GitrepoGet(GitrepoBase, AllOptional):
-    id: int
+    id: str
     created_at: datetime
     updated_at: datetime
 
@@ -89,16 +89,16 @@ class GitrepoGet(GitrepoBase, AllOptional):
         return result
 
 
-class NotebookBase(BaseModel):
-    research_id: int
+class BucketBase(BaseModel):
+    research_id: str
     title: str
     isDefault: bool = False
 
-class NotebookCreate(NotebookBase):
+class BucketCreate(BucketBase):
     pass
 
-class NotebookGet(NotebookBase, AllOptional):
-    id: int
+class BucketGet(BucketBase, AllOptional):
+    id: str
     created_at: datetime
     updated_at: datetime
 
@@ -110,8 +110,8 @@ class NotebookGet(NotebookBase, AllOptional):
     
 
 class NoteBase(BaseModel):
-    user_id: int
-    notebook_id: int
+    user_id: str
+    notebook_id: str
     title: str
     isGitrepo: bool = False
 
@@ -119,7 +119,7 @@ class NoteCreate(NoteBase):
     file_name: str
 
 class NoteGet(NoteBase, AllOptional):
-    id: int
+    id: str
     created_at: datetime
     updated_at: datetime
     file_source_name: str
