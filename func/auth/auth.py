@@ -52,9 +52,9 @@ def verify_user(req: Request):
     # Cookie가 길어서 0, 1로 나누어진 경우도 있음.
     if SUPABASE_COOKIE is None:
         SUPABASE_COOKIE = ""
+        cookie_order = 0
         while True:
-            cookie_order = 0
-            if req.cookies.get(f"sb-{SUPABASE_URL_REFERENCE_ID}-auth-token.{cookie_order}") is None:
+            if req.cookies.get(f"sb-{SUPABASE_URL_REFERENCE_ID}-auth-token.{cookie_order}") == None:
                 break
             SUPABASE_COOKIE = SUPABASE_COOKIE + req.cookies.get(
                 f"sb-{SUPABASE_URL_REFERENCE_ID}-auth-token.{cookie_order}")
