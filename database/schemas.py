@@ -17,9 +17,8 @@ from datetime import datetime, date
 
 class UserBase(BaseModel):
     email: str
-    sign_route: Optional[str] = None
-    billing_key: Optional[str] = None
-    billing_expired_at: Optional[date] = None
+    signature_path: Optional[str] = None
+    is_admin: bool = False
 
 class UserCreate(UserBase):
     password: str
@@ -41,11 +40,10 @@ class User(UserBase):
 
 
 class ProjectBase(BaseModel):
-    PI_id: UUID4
+    team_id: UUID4
+    principal_investigator: str
     title: str
     grant_number: str
-    isRemovable: bool = True
-    isDownloadable: bool = True
 
 class ProjectCreate(ProjectBase):
     pass
@@ -64,21 +62,22 @@ class Project(ProjectBase):
             result.pop("id")
         return result
     
+# # Duplicated
+# class UserProjectBase(BaseModel):
+#     user_id: UUID4
+#     project_id: str
 
-class UserProjectBase(BaseModel):
-    user_id: UUID4
-    project_id: str
+# class UserProjectCreate(UserProjectBase):
+#     pass
 
-class UserProjectCreate(UserProjectBase):
-    pass
-
-class UserProject(UserProjectBase):
-    id: UUID4
+# class UserProject(UserProjectBase):
+#     id: UUID4
 
 
 
 class GitrepoBase(BaseModel):
-    research_id: UUID4
+    bucket_id: UUID4
+    user_id: UUID4
     repo_url: str
 
 class GitrepoCreate(GitrepoBase):
@@ -101,9 +100,10 @@ class Gitrepo(GitrepoBase):
 
 class BucketBase(BaseModel):
     project_id: UUID4
-    user_id: UUID4
+    manager_id: UUID4
     title: str
     isDefault: bool = False
+    is_github: bool
 
 class BucketCreate(BucketBase):
     pass
@@ -127,14 +127,15 @@ class NoteBase(BaseModel):
     user_id: UUID4
     bucket_id: UUID4
     title: str
-    isGitrepo: bool = False
+    timestamp_authentication: str
+    file_name: str
+    is_gitrepo: bool
 
 class NoteCreate(NoteBase):
-    file_name: str
+    pass
 
 class NoteUpdate(NoteBase):
     id: UUID4
-    file_name: str
 
 class Note(NoteBase):
     id: UUID4
@@ -149,3 +150,25 @@ class Note(NoteBase):
             result.pop("id")
         return result
 
+class OrderBase(BaseModel):
+    team_id: UUID4
+    order_number: str
+    started_at: date
+    expired_at: date
+
+class OrderCreate(OrderBase):
+    pass
+
+class OrderUpdate(OrderBase):
+    id: UUID4
+
+class Order(OrderBase):
+    id: UUID4
+    created_at: datetime
+    updated_at: datetime
+
+    def to_dict(self):
+        result = self.__dict__
+        if self.id is None:
+            result.pop("id")
+        return result
