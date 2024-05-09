@@ -30,10 +30,7 @@ def join(request: Request):
         signature_path=None,
         is_admin=False,
     )
-    res = supabase.auth.sign_up({"email": NewUser.email, "password": NewUser.password, "data": {
-        "signature_path": NewUser.signature_path,
-        "is_admin": NewUser.is_admin,
-    }})
+    res = supabase.auth.sign_up({"email": NewUser.email, "password": NewUser.password})
     print('='*120)
     print(res)
 
