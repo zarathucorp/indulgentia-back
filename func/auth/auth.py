@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from database.supabase import supabase
 from gotrue.errors import AuthApiError
 from env import SUPABASE_URL
+import uuid
 
 load_dotenv()
 
@@ -39,7 +40,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Security(securi
     return decode_jwt(credentials.credentials)
 
 
-def verify_user(req: Request):
+def verify_user(req: Request) -> uuid.UUID:
     import urllib.parse
     import json
     from fastapi import HTTPException
@@ -50,6 +51,7 @@ def verify_user(req: Request):
     SUPABASE_COOKIE = req.cookies.get(
         f"sb-{SUPABASE_URL_REFERENCE_ID}-auth-token")
     # Cookie가 길어서 0, 1로 나누어진 경우도 있음.
+    print(SUPABASE_COOKIE)
     if SUPABASE_COOKIE is None:
         SUPABASE_COOKIE = ""
         cookie_order = 0
