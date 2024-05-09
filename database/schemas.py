@@ -57,8 +57,8 @@ class ProjectUpdate(ProjectBase):
 
 class Project(ProjectBase):
     id: UUID4
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
+    created_at: datetime
+    updated_at: datetime | None
 
     def to_dict(self):
         result = self.__dict__
@@ -93,7 +93,7 @@ class GitrepoUpdate(GitrepoBase):
 class Gitrepo(GitrepoBase):
     id: UUID4
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None
 
     def to_dict(self):
         result = self.__dict__
@@ -118,7 +118,7 @@ class BucketUpdate(BucketBase):
 class Bucket(BucketBase):
     id: UUID4
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None
 
     def to_dict(self):
         result = self.__dict__
@@ -144,7 +144,7 @@ class NoteUpdate(NoteBase):
 class Note(NoteBase):
     id: UUID4
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None
     file_source_name: str
     file_route: str
 
@@ -169,7 +169,7 @@ class OrderUpdate(OrderBase):
 class Order(OrderBase):
     id: UUID4
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None
 
     def to_dict(self):
         result = self.__dict__
