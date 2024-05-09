@@ -15,61 +15,74 @@ router = APIRouter(
 
 # create
 @router.post("/")
-async def add_project(request: Request, project: schemas.ProjectCreate):
+async def add_project(req: Request, project: schemas.ProjectCreate):
     # user verification?
-    print(request)
+    print(req)
 
     res = create_project(project)
+    if res["status_code"] >= 300:
+        return JSONResponse(status_code=res["status_code"], content={
+            "status": "failed",
+            "message": res["message"]
+        })
     return JSONResponse(content={
         "status": "succeed",
-        "data": res   
+        "data": res["content"]
     })
     
 # read
 @router.get("/{project_id}")
-async def get_project(request: Request, project_id: str):
-    # user verification?
-    print(request)
-
-    # project_id = uuid.UUID(project_id, version=4)
+async def get_project(req: Request, project_id: str):
     res = read_project(project_id)
+    if res["status_code"] >= 300:
+        return JSONResponse(status_code=res["status_code"], content={
+            "status": "failed",
+            "message": res["message"]
+        })
     return JSONResponse(content={
         "status": "succeed",
-        "data": res
+        "data": res["content"]
     })
 
 # read list
 @router.get("/list/{team_id}")
-async def get_project_list(request: Request, team_id: str):
-    # user verification?
-
-    # team_id = uuid.UUID(team_id, version=4)
+async def get_project_list(req: Request, team_id: str):
     res = read_project_list(team_id)
-    print(res)
+    if res["status_code"] >= 300:
+        return JSONResponse(status_code=res["status_code"], content={
+            "status": "failed",
+            "message": res["message"]
+        })
     return JSONResponse(content={
         "status": "succeed",
-        "data": res
+        "data": res["content"]
     })
 
 # update
 @router.put("/")
-async def change_project(request: Request, project: schemas.ProjectUpdate):
-    # user verification?
-
+async def change_project(req: Request, project: schemas.ProjectUpdate):
     res = update_project(project)
+    if res["status_code"] >= 300:
+        return JSONResponse(status_code=res["status_code"], content={
+            "status": "failed",
+            "message": res["message"]
+        })
     return JSONResponse(content={
         "status": "succeed",
-        "data": res
+        "data": res["content"]
     })
 
 # delete
 @router.delete("/{project_id}")
-async def drop_project(request: Request, project_id: str):
-    # user verification?
-    
+async def drop_project(req: Request, project_id: str):    
     # project_id = uuid.UUID(project_id, version=4)
     res = delete_project(project_id)
+    if res["status_code"] >= 300:
+        return JSONResponse(status_code=res["status_code"], content={
+            "status": "failed",
+            "message": res["message"]
+        })
     return JSONResponse(content={
         "status": "succeed",
-        "data": res
+        "data": res["content"]
     })
