@@ -42,9 +42,12 @@ class User(UserBase):
 
 class ProjectBase(BaseModel):
     team_id: UUID4
-    principal_investigator: str
+    project_leader: str
     title: str
     grant_number: str
+    status: str
+    start_date: Optional[date]
+    end_date: Optional[date]
 
 class ProjectCreate(ProjectBase):
     pass
