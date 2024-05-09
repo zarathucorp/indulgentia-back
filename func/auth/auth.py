@@ -51,7 +51,7 @@ def verify_user(req: Request) -> uuid.UUID:
     SUPABASE_COOKIE = req.cookies.get(
         f"sb-{SUPABASE_URL_REFERENCE_ID}-auth-token")
     # Cookie가 길어서 0, 1로 나누어진 경우도 있음.
-    print(SUPABASE_COOKIE)
+
     if SUPABASE_COOKIE is None:
         SUPABASE_COOKIE = ""
         cookie_order = 0
@@ -64,7 +64,7 @@ def verify_user(req: Request) -> uuid.UUID:
 
     # 쿠키 없는경우 Exception
     if (SUPABASE_COOKIE is None) | (SUPABASE_COOKIE == ""):
-        print("쿠키 없음")
+
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     SUPABASE_COOKIE_DICT = json.loads(urllib.parse.unquote(
