@@ -108,9 +108,15 @@ def delete_note(note_id: UUID4):
         data, count = supabase.table("note").delete().eq("id", note_id).execute()
         print('='*120)
         print(data, count)
+        if not data[1]:
+            return {
+                "status_code": 400,
+                "content": None,
+                "message": "No data"
+            }
         return {
             "status_code": 200,
-            "content": data[1],
+            "content": data[1][0],
             "message": "succeed"
         }
     except Exception as e:

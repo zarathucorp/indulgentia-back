@@ -1,5 +1,6 @@
 import json
 from pydantic import UUID4
+from postgrest.exceptions import APIError
 
 from database.supabase import supabase
 from database import schemas
@@ -8,6 +9,13 @@ from database import schemas
 def create_project(project: schemas.ProjectCreate):
     try:
         project = project.model_dump(mode="json")
+
+        if project.get("start_date") >= project.get("end_date"):
+            return {
+                "status_code": 400,
+                "content": None,
+                "message": "Start date should be earlier than end date"
+            }
 
         data, count = supabase.table("project").insert({**project}).execute()
         print('='*120)
@@ -80,6 +88,13 @@ def update_project(project: schemas.ProjectUpdate):
     try:
         project = project.model_dump(mode="json")
 
+        if project.get("start_date") >= project.get("end_date"):
+            return {
+                "status_code": 400,
+                "content": None,
+                "message": "Start date should be earlier than end date"
+            }
+
         data, count = supabase.table("project").update({**project}).eq("id", project["id"]).execute()
         print('='*120)
         print(data, count)
@@ -108,6 +123,12 @@ def delete_project(project_id: UUID4):
         data, count = supabase.table("project").delete().eq("id", project_id).execute()
         print('='*120)
         print(data, count)
+        if not data[1]:
+            return {
+                "status_code": 400,
+                "content": None,
+                "message": "No data"
+            }
         return {
             "status_code": 200,
             "content": data[1][0],

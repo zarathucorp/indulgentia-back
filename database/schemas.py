@@ -145,8 +145,6 @@ class Note(NoteBase):
     id: UUID4
     created_at: datetime
     updated_at: datetime | None
-    file_source_name: str
-    file_route: str
 
     def to_dict(self):
         result = self.__dict__
