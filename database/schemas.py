@@ -17,6 +17,7 @@ from datetime import datetime, date
 
 class UserBase(BaseModel):
     email: str
+    team_id: str | None = None
     signature_path: Optional[str] = None
     is_admin: bool = False
 
