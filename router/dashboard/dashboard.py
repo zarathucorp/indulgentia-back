@@ -10,7 +10,3 @@ router = APIRouter(
 router.include_router(project.router)
 router.include_router(bucket.router)
 router.include_router(note.router)
-
-"""
-
-"""
