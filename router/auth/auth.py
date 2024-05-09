@@ -6,7 +6,8 @@ from typing import Annotated, List
 from pydantic import BaseModel
 import jwt
 
-from database import schemas, crud
+from database import schemas
+from database.supabase import supabase
 
 
 
@@ -25,9 +26,17 @@ def join(request: Request):
     NewUser = schemas.UserCreate(
         email="koolerjaebee@gmail.com",
         password="1q2w3e$r",
+        team_id=None,
+        signature_path=None,
+        is_admin=False,
     )
+    res = supabase.auth.sign_up({"email": NewUser.email, "password": NewUser.password, "data": {
+        "signature_path": NewUser.signature_path,
+        "is_admin": NewUser.is_admin,
+    }})
+    print('='*120)
+    print(res)
 
-    res = crud.create_user(NewUser)
     return res
 
 

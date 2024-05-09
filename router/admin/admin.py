@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from typing import Annotated, List
 from pydantic import BaseModel
 
-from database import schemas, crud
+from database import schemas
 
 
 router = APIRouter(
