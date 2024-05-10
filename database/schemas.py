@@ -17,8 +17,8 @@ from datetime import datetime, date
 
 class UserBase(BaseModel):
     email: str
-    team_id: str | None = None
-    signature_path: Optional[str] = None
+    team_id: UUID4 | None = None
+    signature_path: str | None = None
     is_admin: bool = False
 
 
@@ -49,8 +49,9 @@ class ProjectBase(BaseModel):
     title: str
     grant_number: str
     status: str
-    start_date: date
-    end_date: date
+    start_date: datetime  # date
+    end_date: datetime
+    is_deleted: bool = False
 
 
 class ProjectCreate(ProjectBase):
@@ -88,6 +89,8 @@ class GitrepoBase(BaseModel):
     bucket_id: UUID4
     user_id: UUID4
     repo_url: str
+    git_username: str
+    git_repository: str
 
 
 class GitrepoCreate(GitrepoBase):
@@ -116,6 +119,7 @@ class BucketBase(BaseModel):
     title: str
     is_default: bool = False
     is_github: bool
+    is_deleted: bool = False
 
 
 class BucketCreate(BucketBase):
@@ -142,12 +146,13 @@ class NoteBase(BaseModel):
     user_id: UUID4
     bucket_id: UUID4
     title: str
-    timestamp_authentication: str
+    timestamp_authentication: str  # need verification?
     file_name: str
     is_github: bool
     github_type: Literal["Commit", "PR", "Issue"] | None
     github_hash: str | None
     github_link: str | None
+    is_deleted: bool = False
 
 
 class NoteCreate(NoteBase):
@@ -172,7 +177,7 @@ class Note(NoteBase):
 
 class OrderBase(BaseModel):
     team_id: UUID4
-    order_number: str
+    order_number: str  # need verification?
     started_at: date
     expired_at: date
 
