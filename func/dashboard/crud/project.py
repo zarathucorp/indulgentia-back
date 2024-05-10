@@ -33,10 +33,12 @@ def create_project(project: schemas.ProjectCreate):
             "content": None,
             "message": str(e)
         }
-    
+
+
 def read_project(project_id: UUID4):
     try:
-        data, count = supabase.table("project").select('*').eq("id", project_id).execute()
+        data, count = supabase.table("project").select(
+            '*').eq("id", project_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -59,9 +61,11 @@ def read_project(project_id: UUID4):
             "message": str(e)
         }
 
+
 def read_project_list(team_id: UUID4):
     try:
-        data, count = supabase.table("project").select('*').eq("team_id", team_id).execute()
+        data, count = supabase.table("project").select(
+            '*').eq("team_id", team_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -72,7 +76,7 @@ def read_project_list(team_id: UUID4):
             }
         return {
             "status_code": 200,
-            "content": data[1][0],
+            "content": data[1],
             "message": "succeed"
         }
     except Exception as e:
@@ -83,6 +87,7 @@ def read_project_list(team_id: UUID4):
             "content": None,
             "message": str(e)
         }
+
 
 def update_project(project: schemas.ProjectUpdate):
     try:
@@ -95,7 +100,8 @@ def update_project(project: schemas.ProjectUpdate):
                 "message": "Start date should be earlier than end date"
             }
 
-        data, count = supabase.table("project").update({**project}).eq("id", project["id"]).execute()
+        data, count = supabase.table("project").update(
+            {**project}).eq("id", project["id"]).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -118,9 +124,11 @@ def update_project(project: schemas.ProjectUpdate):
             "message": str(e)
         }
 
+
 def delete_project(project_id: UUID4):
     try:
-        data, count = supabase.table("project").delete().eq("id", project_id).execute()
+        data, count = supabase.table("project").delete().eq(
+            "id", project_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -142,7 +150,7 @@ def delete_project(project_id: UUID4):
             "content": None,
             "message": str(e)
         }
-    
+
 # # 검증 필요 로직 (삭제)
 # def read_user_list_in_project(project_id: UUID4):
 #     try:
@@ -152,7 +160,7 @@ def delete_project(project_id: UUID4):
 #         return data[1]
 #     except Exception as message:
 #         return JSONResponse(status_code=400, content={"message": str(message)})
-    
+
 # def read_project_list_in_user(user_id: UUID4):
 #     try:
 #         data, count = supabase.table("UserProject").select('*').eq("user_id", user_id).execute()
