@@ -10,7 +10,7 @@ def create_project(project: schemas.ProjectCreate):
     try:
         project = project.model_dump(mode="json")
 
-        if project.get("start_date") >= project.get("end_date"):
+        if project.get("start_date") != None and project.get("end_date") != None and project.get("start_date") > project.get("end_date"):
             return {
                 "status_code": 400,
                 "content": None,
