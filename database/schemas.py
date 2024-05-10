@@ -1,5 +1,5 @@
 from pydantic import BaseModel, UUID4
-from typing import List, Union, Optional, Any
+from typing import List, Union, Optional, Any, Literal
 from datetime import datetime, date
 
 
@@ -144,7 +144,10 @@ class NoteBase(BaseModel):
     title: str
     timestamp_authentication: str
     file_name: str
-    is_gitrepo: bool
+    is_github: bool
+    github_type: Literal["Commit", "PR", "Issue"] | None
+    github_hash: str | None
+    github_link: str | None
 
 
 class NoteCreate(NoteBase):
