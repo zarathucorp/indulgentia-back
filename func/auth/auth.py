@@ -79,3 +79,72 @@ def verify_user(req: Request) -> uuid.UUID:
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Internal Server Error: {e}")
+
+
+# 최적화 필요함 (너무 많은 Query 요청)
+# N + 1 query problem -> join?
+def verify_team(user_id: uuid.UUID, team_id: uuid.UUID) -> bool:
+    # Left
+    data, count = supabase.table("user_setting").select("team_id").eq("id", user_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data from user_id")
+    left_team_id = data[1][0].get("team_id")
+
+    return left_team_id == team_id
+
+def verify_project(user_id: uuid.UUID, project_id: uuid.UUID) -> bool:
+    # Left
+    data, count = supabase.table("user_setting").select("team_id").eq("id", user_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data from user_id")
+    left_team_id = data[1][0].get("team_id")
+
+    # Right
+    data, count = supabase.table("project").select("team_id").eq("id", project_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data from project_id")
+    right_team_id = data[1][0].get("team_id")
+
+    return left_team_id == right_team_id
+
+def verify_bucket(user_id: uuid.UUID, bucket_id: uuid.UUID) -> bool:
+    # Left
+    data, count = supabase.table("user_setting").select("team_id").eq("id", user_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data from user_id")
+    left_team_id = data[1][0].get("team_id")
+
+    # Right
+    data, count = supabase.table("bucket").select("project_id").eq("id", bucket_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data from bucket_id")
+    right_project_id = data[1][0].get("project_id")
+    data, count = supabase.table("project").select("team_id").eq("id", right_project_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data from project_id")
+    right_team_id = data[1][0].get("team_id")
+
+    return left_team_id == right_team_id
+
+def verify_note(user_id: uuid.UUID, note_id: uuid.UUID) -> bool:
+    # Left
+    data, count = supabase.table("user_setting").select("team_id").eq("id", user_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data from user_id")
+    left_team_id = data[1][0].get("team_id")
+
+    # Right
+    data, count = supabase.table("note").select("bucket_id").eq("id", note_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data from note_id")
+    right_bucket_id = data[1][0].get("bucket_id")
+    data, count = supabase.table("bucket").select("project_id").eq("id", right_bucket_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data from bucket_id")
+    right_project_id = data[1][0].get("project_id")
+    data, count = supabase.table("project").select("team_id").eq("id", right_project_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data from project_id")
+    right_team_id = data[1][0].get("team_id")
+
+    return left_team_id == right_team_id

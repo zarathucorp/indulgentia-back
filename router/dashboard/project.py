@@ -5,7 +5,7 @@ from pydantic import UUID4
 from typing import List
 
 from database import supabase, schemas
-from func.auth.auth import verify_user
+from func.auth.auth import *
 from func.dashboard.crud.project import *
 
 
@@ -20,6 +20,11 @@ router = APIRouter(
 
 @router.get("/{project_id}", tags=["project"])
 async def get_project(req: Request, project_id: str):
+    user: UUID4 = verify_user(req)
+    # if not user:
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    if not verify_project(user, project_id):
+        raise HTTPException(status_code=401, detail="Unauthorized")
     res = read_project(project_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -31,6 +36,11 @@ async def get_project(req: Request, project_id: str):
 
 @router.get("/list/{team_id}", tags=["project"])
 async def get_project_list(req: Request, team_id: str):
+    user: UUID4 = verify_user(req)
+    # if not user:
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    if not verify_team(user, team_id):
+        raise HTTPException(status_code=401, detail="Unauthorized")
     res = read_project_list(team_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -42,9 +52,11 @@ async def get_project_list(req: Request, team_id: str):
 
 @router.post("/", tags=["project"])
 async def add_project(req: Request, project: schemas.ProjectCreate):
-    # user verification?
-    
-
+    user: UUID4 = verify_user(req)
+    # if not user:
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    if not verify_team(user, project["project_id"]):
+        raise HTTPException(status_code=401, detail="Unauthorized")
     res = create_project(project)
     return JSONResponse(content={
         "status": "succeed",
@@ -56,6 +68,16 @@ async def add_project(req: Request, project: schemas.ProjectCreate):
 
 @router.put("/{project_id}", tags=["project"])
 async def change_project(req: Request, project: schemas.ProjectUpdate):
+    user: UUID4 = verify_user(req)
+    # if not user:
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    if not verify_project(user, project["project_id"]):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    # # need verify project_leader?
+    # if not user == project["project_leader"]:  # not working
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
+
     res = update_project(project)
     return JSONResponse(content={
         "status": "succeed",
@@ -67,7 +89,16 @@ async def change_project(req: Request, project: schemas.ProjectUpdate):
 
 @router.delete("/{project_id}", tags=["project"])
 async def drop_project(req: Request, project_id: str):
-    # project_id = uuid.UUID(project_id, version=4)
+    user: UUID4 = verify_user(req)
+    # if not user:
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    if not verify_project(user, project_id):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    # # need verify project_leader?
+    # if not user == project["project_leader"]:  # not working
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    
     res = delete_project(project_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -78,7 +109,7 @@ async def drop_project(req: Request, project_id: str):
 # read list
 
 
-@router.get("/", tags=["project"])
+@router.get("/")
 def project_list(req: Request):
     user: uuid.UUID = verify_user(req)
     if not user:
