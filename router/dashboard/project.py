@@ -87,21 +87,3 @@ async def drop_project(req: Request, project_id: str):
         "data": res["content"]
     })
   
-"""
-@router.get("/")
-def project_list(req: Request):
-    user: uuid.UUID = verify_user(req)
-    if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    data, count = supabase.from_("user_setting").select(
-        "team_id").eq("id", user).execute()
-    if len(user[1]) == 0:
-        raise HTTPException(status_code=500, detail="Supabase Error")
-
-    team_id = data[1][0].get("team_id")
-
-    if not team_id:
-        raise HTTPException(status_code=400, detail="User not found")
-    project_list = read_project_list(team_id)
-    return {"status": "succeed", "project_list": project_list}
-"""
