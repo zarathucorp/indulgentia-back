@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import UUID4
-
+from cloud.azure.blob_storage import generate_presigned_url
 from database import schemas
 from func.dashboard.crud.note import *
 from func.auth.auth import *
@@ -119,3 +119,13 @@ async def drop_note(req: Request, note_id: str):
         "data": res
     })
 """
+
+
+@router.get("/file/{note_id}")
+async def get_note_file(req: Request, note_id: str):
+    # Auth 먼저 해야함
+    try:
+        url = generate_presigned_url(note_id + ".pdf")
+        return JSONResponse(content={"status": "succeed", "url": url})
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"status": "failed", "message": str(e)})

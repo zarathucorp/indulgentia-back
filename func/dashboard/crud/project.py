@@ -35,6 +35,7 @@ def read_project(project_id: UUID4):
         print(e)
         raise HTTPException(status_code=400, detail=str(e))
 
+
 def read_project_list(team_id: UUID4):
     try:
         data, count = supabase.table("project").select('*').eq("is_deleted", False).eq("team_id", team_id).execute()
@@ -48,6 +49,7 @@ def read_project_list(team_id: UUID4):
         print(e)
         raise HTTPException(status_code=400, detail=str(e))
 
+
 def update_project(project: schemas.ProjectUpdate):
     try:
         project = project.model_dump(mode="json")
@@ -55,7 +57,8 @@ def update_project(project: schemas.ProjectUpdate):
         if project.get("start_date") >= project.get("end_date"):
             raise HTTPException(status_code=400, detail="Start date should be earlier than end date")
 
-        data, count = supabase.table("project").update({**project}).eq("id", project["id"]).execute()
+        data, count = supabase.table("project").update(
+            {**project}).eq("id", project["id"]).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -82,7 +85,8 @@ def flag_is_deleted_project(project_id: UUID4):
 # Old version
 def delete_project(project_id: UUID4):
     try:
-        data, count = supabase.table("project").delete().eq("id", project_id).execute()
+        data, count = supabase.table("project").delete().eq(
+            "id", project_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -102,7 +106,7 @@ def delete_project(project_id: UUID4):
 #         return data[1]
 #     except Exception as message:
 #         return JSONResponse(status_code=400, content={"message": str(message)})
-    
+
 # def read_project_list_in_user(user_id: UUID4):
 #     try:
 #         data, count = supabase.table("UserProject").select('*').eq("user_id", user_id).execute()

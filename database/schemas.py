@@ -45,12 +45,12 @@ class User(UserBase):
 
 class ProjectBase(BaseModel):
     team_id: UUID4
-    project_leader: str
+    project_leader: str | None = None
     title: str
-    grant_number: str
-    status: str
-    start_date: datetime  # date
-    end_date: datetime
+    grant_number: str | None = None
+    status: str | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
 
 
 class ProjectCreate(ProjectBase):

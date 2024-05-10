@@ -142,4 +142,7 @@ def project_list(req: Request):
     if not team_id:
         raise HTTPException(status_code=400, detail="User not found")
     project_list = read_project_list(team_id)
-    return {"status": "succeed", "project_list": project_list}
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": project_list["content"]
+    })

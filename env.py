@@ -11,6 +11,7 @@ if current_mode == "prod":
 elif current_mode == "dev":
     AZURE_STORAGE_CONNECTION_STRING = os.getenv(
         "AZURE_STORAGE_CONNECTION_STRING")
+    DEFAULT_AZURE_CONTAINER_NAME = os.getenv("DEFAULT_AZURE_CONTAINER_NAME")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
