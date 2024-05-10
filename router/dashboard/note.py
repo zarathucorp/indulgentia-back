@@ -96,8 +96,26 @@ async def drop_note(req: Request, note_id: str):
         raise HTTPException(status_code=400, detail="No data")
     if not user == data[1][0]["user_id"]:
         raise HTTPException(status_code=401, detail="Unauthorized")
+    res = flag_is_deleted_note(note_id)
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": res
+    })
+
+""" Old version
+@router.delete("/{note_id}", tags=["note"])
+async def drop_note(req: Request, note_id: str):
+    user: UUID4 = verify_user(req)
+    # if not user:
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    data, count = supabase.table("note").select("user_id").eq("id", note_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data")
+    if not user == data[1][0]["user_id"]:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     res = delete_note(note_id)
     return JSONResponse(content={
         "status": "succeed",
         "data": res
     })
+"""

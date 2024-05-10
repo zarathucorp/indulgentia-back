@@ -98,12 +98,32 @@ async def drop_project(req: Request, project_id: str):
     # # need verify project_leader?
     # if not user == project["project_leader"]:  # not working
     #     raise HTTPException(status_code=401, detail="Unauthorized")
+
+    res = flag_is_deleted_project(project_id)
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": res
+    })
+
+""" Old version
+@router.delete("/{project_id}", tags=["project"])
+async def drop_project(req: Request, project_id: str):
+    user: UUID4 = verify_user(req)
+    # if not user:
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    if not verify_project(user, project_id):
+        raise HTTPException(status_code=401, detail="Unauthorized")
     
+    # # need verify project_leader?
+    # if not user == project["project_leader"]:  # not working
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
+
     res = delete_project(project_id)
     return JSONResponse(content={
         "status": "succeed",
         "data": res
     })
+"""
 
 # alternative version
 # read list

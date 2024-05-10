@@ -24,7 +24,7 @@ def create_project(project: schemas.ProjectCreate):
     
 def read_project(project_id: UUID4):
     try:
-        data, count = supabase.table("project").select('*').eq("id", project_id).execute()
+        data, count = supabase.table("project").select('*').eq("is_deleted", False).eq("id", project_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -37,7 +37,7 @@ def read_project(project_id: UUID4):
 
 def read_project_list(team_id: UUID4):
     try:
-        data, count = supabase.table("project").select('*').eq("team_id", team_id).execute()
+        data, count = supabase.table("project").select('*').eq("is_deleted", False).eq("team_id", team_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -65,7 +65,21 @@ def update_project(project: schemas.ProjectUpdate):
         print('='*120)
         print(e)
         raise HTTPException(status_code=400, detail=str(e))
+    
+def flag_is_deleted_project(project_id: UUID4):
+    try:
+        data, count = supabase.table("project").update({"is_deleted": True}).eq("id", project_id).execute()
+        print('='*120)
+        print(data, count)
+        if not data[1]:
+            raise HTTPException(status_code=400, detail="No data")
+        return data[1][0]
+    except Exception as e:
+        print('='*120)
+        print(e)
+        raise HTTPException(status_code=400, detail=str(e))
 
+# Old version
 def delete_project(project_id: UUID4):
     try:
         data, count = supabase.table("project").delete().eq("id", project_id).execute()
@@ -78,7 +92,7 @@ def delete_project(project_id: UUID4):
         print('='*120)
         print(e)
         raise HTTPException(status_code=400, detail=str(e))
-    
+        
 # # 검증 필요 로직 (삭제)
 # def read_user_list_in_project(project_id: UUID4):
 #     try:

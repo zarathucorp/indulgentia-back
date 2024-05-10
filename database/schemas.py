@@ -51,11 +51,10 @@ class ProjectBase(BaseModel):
     status: str
     start_date: datetime  # date
     end_date: datetime
-    is_deleted: bool = False
 
 
 class ProjectCreate(ProjectBase):
-    pass
+    is_deleted: bool = False
 
 
 class ProjectUpdate(ProjectBase):
@@ -66,6 +65,7 @@ class Project(ProjectBase):
     id: UUID4
     created_at: datetime
     updated_at: datetime | None
+    is_deleted: bool
 
     def to_dict(self):
         result = self.__dict__
@@ -119,11 +119,10 @@ class BucketBase(BaseModel):
     title: str
     is_default: bool = False
     is_github: bool
-    is_deleted: bool = False
 
 
 class BucketCreate(BucketBase):
-    pass
+    is_deleted: bool = False
 
 
 class BucketUpdate(BucketBase):
@@ -134,6 +133,7 @@ class Bucket(BucketBase):
     id: UUID4
     created_at: datetime
     updated_at: datetime | None
+    is_deleted: bool
 
     def to_dict(self):
         result = self.__dict__
@@ -152,11 +152,10 @@ class NoteBase(BaseModel):
     github_type: Literal["Commit", "PR", "Issue"] | None
     github_hash: str | None
     github_link: str | None
-    is_deleted: bool = False
 
 
 class NoteCreate(NoteBase):
-    pass
+    is_deleted: bool = False
 
 
 class NoteUpdate(NoteBase):
@@ -167,6 +166,7 @@ class Note(NoteBase):
     id: UUID4
     created_at: datetime
     updated_at: datetime | None
+    is_deleted: bool
 
     def to_dict(self):
         result = self.__dict__
