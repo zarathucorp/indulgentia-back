@@ -114,7 +114,7 @@ class BucketBase(BaseModel):
     project_id: UUID4
     manager_id: UUID4
     title: str
-    isDefault: bool = False
+    is_default: bool = False
     is_github: bool
 
 

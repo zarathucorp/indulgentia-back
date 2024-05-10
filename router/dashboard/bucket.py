@@ -11,67 +11,58 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-@router.post("/")
-async def add_bucket(req: Request, bucket: schemas.BucketCreate):
-    res = create_bucket(bucket)
-    if res["status_code"] >= 300:
-        return JSONResponse(status_code=res["status_code"], content={
-            "status": "failed",
-            "message": res["message"]
-        })
-    return JSONResponse(content={
-        "status": "succeed",
-        "data": res["content"]
-    })
 
-@router.get("/{bucket_id}")
+# read
+
+
+@router.get("/{bucket_id}", tags=["bucket"])
 async def get_bucket(req: Request, bucket_id: str):
     res = read_bucket(bucket_id)
-    if res["status_code"] >= 300:
-        return JSONResponse(status_code=res["status_code"], content={
-            "status": "failed",
-            "message": res["message"]
-        })
     return JSONResponse(content={
         "status": "succeed",
-        "data": res["content"]
+        "data": res
     })
 
-@router.get("/list/{project_id}")
+# read list
+
+
+@router.get("/list/{project_id}", tags=["bucket"])
 async def get_bucket_list(req: Request, project_id: str):
     res = read_bucket_list(project_id)
-    if res["status_code"] >= 300:
-        return JSONResponse(status_code=res["status_code"], content={
-            "status": "failed",
-            "message": res["message"]
-        })
     return JSONResponse(content={
         "status": "succeed",
-        "data": res["content"]
+        "data": res
     })
 
-@router.put("/")
+# create
+
+
+@router.post("/", tags=["bucket"])
+async def add_bucket(req: Request, bucket: schemas.BucketCreate):
+    res = create_bucket(bucket)
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": res
+    })
+
+# update
+
+
+@router.put("/{bucket_id}", tags=["bucket"])
 async def change_bucket(req: Request, bucket: schemas.BucketUpdate):
     res = update_bucket(bucket)
-    if res["status_code"] >= 300:
-        return JSONResponse(status_code=res["status_code"], content={
-            "status": "failed",
-            "message": res["message"]
-        })
     return JSONResponse(content={
         "status": "succeed",
-        "data": res["content"]
+        "data": res
     })
 
-@router.delete("/{bucket_id}")
+# delete
+
+
+@router.delete("/{bucket_id}", tags=["bucket"])
 async def drop_bucket(req: Request, bucket_id: str):
     res = delete_bucket(bucket_id)
-    if res["status_code"] >= 300:
-        return JSONResponse(status_code=res["status_code"], content={
-            "status": "failed",
-            "message": res["message"]
-        })
     return JSONResponse(content={
         "status": "succeed",
-        "data": res["content"]
+        "data": res
    })
