@@ -92,19 +92,28 @@ def verify_team(user_id: uuid.UUID, team_id: uuid.UUID) -> bool:
     return left_team_id == team_id
 
 def verify_project(user_id: uuid.UUID, project_id: uuid.UUID) -> bool:
-    # Left
-    data, count = supabase.table("user_setting").select("team_id").eq("id", user_id).execute()
-    if not data[1]:
-        raise HTTPException(status_code=400, detail="No data from user_id")
-    left_team_id = data[1][0].get("team_id")
+    # # Left
+    # data, count = supabase.table("user_setting").select("team_id").eq("id", user_id).execute()
+    # if not data[1]:
+    #     raise HTTPException(status_code=400, detail="No data from user_id")
+    # left_team_id = data[1][0].get("team_id")
 
-    # Right
-    data, count = supabase.table("project").select("team_id").eq("id", project_id).execute()
-    if not data[1]:
-        raise HTTPException(status_code=400, detail="No data from project_id")
-    right_team_id = data[1][0].get("team_id")
+    # # Right
+    # data, count = supabase.table("project").select("team_id").eq("id", project_id).execute()
+    # if not data[1]:
+    #     raise HTTPException(status_code=400, detail="No data from project_id")
+    # right_team_id = data[1][0].get("team_id")
 
-    return left_team_id == right_team_id
+    # return left_team_id == right_team_id
+
+    """
+    SELECT *
+    FROM team
+    JOIN user_setting on team.id = user_setting.team_id
+    JOIN project on team.id = project.team_id
+    """
+    pass
+
 
 def verify_bucket(user_id: uuid.UUID, bucket_id: uuid.UUID) -> bool:
     # Left
