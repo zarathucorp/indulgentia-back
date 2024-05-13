@@ -13,30 +13,14 @@ router = APIRouter(
 )
 
 
-# read
-
-
-@router.get("/{note_id}", tags=["note"])
-async def get_note(req: Request, note_id: str):
-    user: UUID4 = verify_user(req)
-    # if not user:
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
-    if not verify_note(user, note_id):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    res = read_note(note_id)
-    return JSONResponse(content={
-        "status": "succeed",
-        "data": res
-    })
-
 # read list
 
 
 @router.get("/list/{bucket_id}", tags=["note"])
 async def get_note_list(req: Request, bucket_id: str):
     user: UUID4 = verify_user(req)
-    # if not user:
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     if not verify_bucket(user, bucket_id):
         raise HTTPException(status_code=401, detail="Unauthorized")
     res = read_note_list(bucket_id)
@@ -45,14 +29,32 @@ async def get_note_list(req: Request, bucket_id: str):
         "data": res
     })
 
+# read
+
+
+@router.get("/{note_id}", tags=["note"])
+async def get_note(req: Request, note_id: str):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if not verify_note(user, note_id):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    res = read_note(note_id)
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": res
+    })
+
+
+
 # create
 
 
 @router.post("/", tags=["note"])
 async def add_note(req: Request, note: schemas.NoteCreate):
     user: UUID4 = verify_user(req)
-    # if not user:
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     if not verify_bucket(user, note["bucket_id"]):
         raise HTTPException(status_code=401, detail="Unauthorized")
     
@@ -70,8 +72,8 @@ async def add_note(req: Request, note: schemas.NoteCreate):
 @router.put("/{note_id}", tags=["note"])
 async def change_note(req: Request, note: schemas.NoteUpdate):
     user: UUID4 = verify_user(req)
-    # if not user:
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     if not user == note["user_id"]:
         raise HTTPException(status_code=401, detail="Unauthorized")
     
@@ -89,8 +91,8 @@ async def change_note(req: Request, note: schemas.NoteUpdate):
 @router.delete("/{note_id}", tags=["note"])
 async def drop_note(req: Request, note_id: str):
     user: UUID4 = verify_user(req)
-    # if not user:
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     data, count = supabase.table("note").select("user_id").eq("id", note_id).execute()
     if not data[1]:
         raise HTTPException(status_code=400, detail="No data")

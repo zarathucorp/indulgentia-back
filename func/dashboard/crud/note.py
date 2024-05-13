@@ -21,7 +21,7 @@ def create_note(note: schemas.NoteCreate):
 
 def read_note(note_id: UUID4):
     try:
-        data, count = supabase.table("note").select('*').eq("is_deleted", True).eq("id", note_id).execute()
+        data, count = supabase.table("note").select('*').eq("is_deleted", False).eq("id", note_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -34,7 +34,7 @@ def read_note(note_id: UUID4):
 
 def read_note_list(bucket_id: UUID4):
     try:
-        data ,count = supabase.table("note").select('*').eq("is_deleted", True).eq("bucket_id", bucket_id).execute()
+        data ,count = supabase.table("note").select('*').eq("is_deleted", False).eq("bucket_id", bucket_id).execute()
         print('='*120)
         print(data ,count)
         if not data[1]:
