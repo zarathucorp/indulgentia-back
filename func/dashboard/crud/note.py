@@ -1,5 +1,6 @@
 import json
 from pydantic import UUID4
+from fastapi import HTTPException
 
 from database.supabase import supabase
 from database import schemas
@@ -12,69 +13,37 @@ def create_note(note: schemas.NoteCreate):
         data, count = supabase.table("note").insert({**note}).execute()
         print('='*120)
         print(data, count)
-        return {
-            "status_code": 200,
-            "content": data[1],
-            "message": "succeed"
-        }
+        return data[1][0]
     except Exception as e:
         print('='*120)
         print(e)
-        return {
-            "status_code": 400,
-            "content": None,
-            "message": str(e)
-        }
+        raise HTTPException(status_code=400, detail=str(e))
 
 def read_note(note_id: UUID4):
     try:
-        data, count = supabase.table("note").select('*').eq("id", note_id).execute()
+        data, count = supabase.table("note").select('*').eq("is_deleted", True).eq("id", note_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
-            return {
-                "status_code": 400,
-                "content": None,
-                "message": "No data"
-            }
-        return {
-            "status_code": 200,
-            "content": data[1][0],
-            "message": "succeed"
-        }
+            raise HTTPException(status_code=400, detail="No data")
+        return data[1][0]
     except Exception as e:
         print('='*120)
         print(e)
-        return {
-            "status_code": 400,
-            "content": None,
-            "message": str(e)
-        }
+        raise HTTPException(status_code=400, detail=str(e))
 
 def read_note_list(bucket_id: UUID4):
     try:
-        data ,count = supabase.table("note").select('*').eq("bucket_id", bucket_id).execute()
+        data ,count = supabase.table("note").select('*').eq("is_deleted", True).eq("bucket_id", bucket_id).execute()
         print('='*120)
         print(data ,count)
         if not data[1]:
-            return {
-                "status_code": 400,
-                "content": None,
-                "message": "No data"
-            }
-        return {
-            "status_code": 200,
-            "content": data[1],
-            "message": "succeed"
-        }
+            raise HTTPException(status_code=400, detail="No data")
+        return data[1]
     except Exception as e:
         print('='*120)
         print(e)
-        return {
-            "status_code": 400,
-            "content": None,
-            "message": str(e)
-        }
+        raise HTTPException(status_code=400, detail=str(e))
 
 def update_note(note: schemas.NoteUpdate):
     try:
@@ -84,46 +53,36 @@ def update_note(note: schemas.NoteUpdate):
         print('='*120)
         print(data, count)
         if not data[1]:
-            return {
-                "status_code": 400,
-                "content": None,
-                "message": "No data"
-            }
-        return {
-            "status_code": 200,
-            "content": data[1],
-            "message": "succeed"
-        }
+            raise HTTPException(status_code=400, detail="No data")
+        return data[1][0]
     except Exception as e:
         print('='*120)
         print(e)
-        return {
-            "status_code": 400,
-            "content": None,
-            "message": str(e)
-        }
+        raise HTTPException(status_code=400, detail=str(e))
 
+def flag_is_deleted_note(note_id: UUID4):
+    try:
+        data, count = supabase.table("note").update({"is_deleted": True}).eq("id", note_id).execute()
+        print('='*120)
+        print(data, count)
+        if not data[1]:
+            raise HTTPException(status_code=400, detail="No data")
+        return data[1][0]
+    except Exception as e:
+        print('='*120)
+        print(e)
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Old version
 def delete_note(note_id: UUID4):
     try:
         data, count = supabase.table("note").delete().eq("id", note_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
-            return {
-                "status_code": 400,
-                "content": None,
-                "message": "No data"
-            }
-        return {
-            "status_code": 200,
-            "content": data[1][0],
-            "message": "succeed"
-        }
+            raise HTTPException(status_code=400, detail="No data")
+        return data[1][0]
     except Exception as e:
         print('='*120)
         print(e)
-        return {
-            "status_code": 400,
-            "content": None,
-            "message": str(e)
-        }
+        raise HTTPException(status_code=400, detail=str(e))

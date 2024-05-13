@@ -1,5 +1,5 @@
 from pydantic import BaseModel, UUID4
-from typing import List, Union, Optional, Any
+from typing import List, Union, Optional, Any, Literal
 from datetime import datetime, date
 
 
@@ -17,8 +17,8 @@ from datetime import datetime, date
 
 class UserBase(BaseModel):
     email: str
-    team_id: str | None = None
-    signature_path: Optional[str] = None
+    team_id: UUID4 | None = None
+    signature_path: str | None = None
     is_admin: bool = False
 
 
@@ -54,7 +54,7 @@ class ProjectBase(BaseModel):
 
 
 class ProjectCreate(ProjectBase):
-    pass
+    is_deleted: bool = False
 
 
 class ProjectUpdate(ProjectBase):
@@ -65,6 +65,7 @@ class Project(ProjectBase):
     id: UUID4
     created_at: datetime
     updated_at: datetime | None
+    is_deleted: bool
 
     def to_dict(self):
         result = self.__dict__
@@ -88,6 +89,8 @@ class GitrepoBase(BaseModel):
     bucket_id: UUID4
     user_id: UUID4
     repo_url: str
+    git_username: str
+    git_repository: str
 
 
 class GitrepoCreate(GitrepoBase):
@@ -114,12 +117,12 @@ class BucketBase(BaseModel):
     project_id: UUID4
     manager_id: UUID4
     title: str
-    isDefault: bool = False
+    is_default: bool = False
     is_github: bool
 
 
 class BucketCreate(BucketBase):
-    pass
+    is_deleted: bool = False
 
 
 class BucketUpdate(BucketBase):
@@ -130,6 +133,7 @@ class Bucket(BucketBase):
     id: UUID4
     created_at: datetime
     updated_at: datetime | None
+    is_deleted: bool
 
     def to_dict(self):
         result = self.__dict__
@@ -142,13 +146,16 @@ class NoteBase(BaseModel):
     user_id: UUID4
     bucket_id: UUID4
     title: str
-    timestamp_authentication: str
+    timestamp_authentication: str  # need verification?
     file_name: str
-    is_gitrepo: bool
+    is_github: bool
+    github_type: Literal["Commit", "PR", "Issue"] | None
+    github_hash: str | None
+    github_link: str | None
 
 
 class NoteCreate(NoteBase):
-    pass
+    is_deleted: bool = False
 
 
 class NoteUpdate(NoteBase):
@@ -159,6 +166,7 @@ class Note(NoteBase):
     id: UUID4
     created_at: datetime
     updated_at: datetime | None
+    is_deleted: bool
 
     def to_dict(self):
         result = self.__dict__
@@ -169,7 +177,7 @@ class Note(NoteBase):
 
 class OrderBase(BaseModel):
     team_id: UUID4
-    order_number: str
+    order_number: str  # need verification?
     started_at: date
     expired_at: date
 
