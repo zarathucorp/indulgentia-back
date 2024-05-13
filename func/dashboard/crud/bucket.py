@@ -21,7 +21,7 @@ def create_bucket(bucket: schemas.BucketCreate):
 
 def read_bucket(bucket_id: UUID4):
     try:
-        data, count = supabase.table("bucket").select('*').eq("is_deleted", True).eq("id", bucket_id).execute()
+        data, count = supabase.table("bucket").select('*').eq("is_deleted", False).eq("id", bucket_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -34,7 +34,7 @@ def read_bucket(bucket_id: UUID4):
     
 def read_bucket_list(project_id: UUID4):
     try:
-        data, count = supabase.table("bucket").select('*').eq("is_deleted", True).eq("project_id", project_id).execute()
+        data, count = supabase.table("bucket").select('*').eq("is_deleted", False).eq("project_id", project_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
