@@ -31,12 +31,14 @@ async def get_project_list(req: Request, team_id: str):
         "data": res
     })
 
+
 @router.get("/list", tags=["project"])
 async def get_project_list_by_current_user(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    data, count = supabase.table("user_setting").select("team_id").eq("id", user).execute()
+    data, count = supabase.table("user_setting").select(
+        "team_id").eq("id", user).execute()
     if not data[1]:
         raise HTTPException(status_code=500, detail="Supabase Error")
     res = read_project_list(data[1][0].get("team_id"))
@@ -63,7 +65,6 @@ async def get_project(req: Request, project_id: str):
     })
 
 
-
 # create
 
 
@@ -71,9 +72,9 @@ async def get_project(req: Request, project_id: str):
 async def add_project(req: Request, project: schemas.ProjectCreate):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    if not verify_team(user, project["project_id"]):
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=401, detail="Unauthorized - user")
+    if not verify_team(user, project.team_id):
+        raise HTTPException(status_code=401, detail="Unauthorized - team")
     res = create_project(project)
     return JSONResponse(content={
         "status": "succeed",
@@ -91,7 +92,7 @@ async def change_project(req: Request, project: schemas.ProjectUpdate):
     data, count = supabase.rpc("verify_project", {"user_id": user, "project_id": project.get("id", "")}).execute()
     if not data[1]:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    
+
     # # need verify project_leader?
     # if not user == project["project_leader"]:  # not working
     #     raise HTTPException(status_code=401, detail="Unauthorized")
@@ -113,7 +114,7 @@ async def drop_project(req: Request, project_id: str):
     data, count = supabase.rpc("verify_project", {"user_id": user, "project_id": project_id}).execute()
     if not data[1]:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    
+
     # # need verify project_leader?
     # if not user == project["project_leader"]:  # not working
     #     raise HTTPException(status_code=401, detail="Unauthorized")

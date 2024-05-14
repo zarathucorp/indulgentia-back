@@ -20,5 +20,7 @@ def generate_presigned_url(blob_name, container_name=DEFAULT_AZURE_CONTAINER_NAM
         expiry=datetime.utcnow() + timedelta(minutes=expiry_minutes)
     )
 
-    blob_url = f"https://{account_name}.blob.core.windows.net/{container_name}/{blob_name}?{sas_token}"
+
+    blob_url = f"https://{account_name}.blob.core.windows.net/" + \
+        f"{container_name}/{blob_name}?{sas_token}"
     return blob_url
