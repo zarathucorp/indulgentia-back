@@ -71,9 +71,9 @@ async def get_project(req: Request, project_id: str):
 async def add_project(req: Request, project: schemas.ProjectCreate):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    if not verify_team(user, project["project_id"]):
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=401, detail="Unauthorized - user")
+    if not verify_team(user, project.team_id):
+        raise HTTPException(status_code=401, detail="Unauthorized - team")
     res = create_project(project)
     return JSONResponse(content={
         "status": "succeed",
