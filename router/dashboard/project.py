@@ -21,8 +21,8 @@ router = APIRouter(
 @router.get("/list/{team_id}", tags=["project"])
 async def get_project_list(req: Request, team_id: str):
     user: UUID4 = verify_user(req)
-    # if not user:
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     if not verify_team(user, team_id):
         raise HTTPException(status_code=401, detail="Unauthorized")
     res = read_project_list(team_id)
@@ -55,7 +55,8 @@ async def get_project(req: Request, project_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    if not verify_project(user, project_id):
+    data, count = supabase.rpc("verify_project", {"user_id": user, "project_id": project_id}).execute()
+    if not data[1]:
         raise HTTPException(status_code=401, detail="Unauthorized")
     res = read_project(project_id)
     return JSONResponse(content={
@@ -88,7 +89,8 @@ async def change_project(req: Request, project: schemas.ProjectUpdate):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    if not verify_project(user, project["project_id"]):
+    data, count = supabase.rpc("verify_project", {"user_id": user, "project_id": project.get("id", "")}).execute()
+    if not data[1]:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     # # need verify project_leader?
@@ -109,7 +111,8 @@ async def drop_project(req: Request, project_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    if not verify_project(user, project_id):
+    data, count = supabase.rpc("verify_project", {"user_id": user, "project_id": project_id}).execute()
+    if not data[1]:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     # # need verify project_leader?
