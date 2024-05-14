@@ -10,7 +10,7 @@ router = APIRouter(
 )
 
 
-@router.get("/")
+@router.get("/list")
 def get_team_user_list(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
@@ -22,4 +22,17 @@ def get_team_user_list(req: Request):
     return JSONResponse(content={
         "status": "succeed",
         "data": res
+    })
+
+
+@router.get("/")
+def get_user_team_req(req: Request):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    user_team_id = get_user_team(user)
+
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": user_team_id
     })
