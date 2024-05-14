@@ -115,10 +115,11 @@ class Gitrepo(GitrepoBase):
 
 class BucketBase(BaseModel):
     project_id: UUID4
-    manager_id: UUID4
+    # manager_id: UUID4
+    manager_id: str
     title: str
-    is_default: bool = False
-    is_github: bool
+    # is_default: bool = False
+    # is_github: bool = False
 
 
 class BucketCreate(BucketBase):

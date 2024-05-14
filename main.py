@@ -8,6 +8,7 @@ import uvicorn
 from router.auth import auth
 from router.admin import admin
 from router.dashboard import dashboard
+from router.user import user
 
 load_dotenv(verbose=True)
 
@@ -30,6 +31,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(dashboard.router)
+app.include_router(user.router)
 
 
 if __name__ == "__main__":
