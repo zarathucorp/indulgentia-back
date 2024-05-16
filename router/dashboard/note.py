@@ -21,7 +21,7 @@ async def get_note_list(req: Request, bucket_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    data, count = supabase.rpc("verify_bucket", {"user_id": user, "bucket_id": bucket_id}).execute()
+    data, count = supabase.rpc("verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     if not data[1]:
         raise HTTPException(status_code=401, detail="Unauthorized")
     res = read_note_list(bucket_id)
@@ -77,7 +77,7 @@ async def change_note(req: Request, note: schemas.NoteUpdate):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    if not user == note["user_id"]:
+    if not user == note.user_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
     
     # need verify timestamp logic
