@@ -1,6 +1,8 @@
-from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
+from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions, BlobClient
 from env import AZURE_STORAGE_CONNECTION_STRING, DEFAULT_AZURE_CONTAINER_NAME
 from datetime import datetime, timedelta
+from pydantic import UUID4
+from fastapi import HTTPException
 
 azure_blob_client = BlobServiceClient.from_connection_string(
     conn_str=AZURE_STORAGE_CONNECTION_STRING)
@@ -24,3 +26,32 @@ def generate_presigned_url(blob_name, container_name=DEFAULT_AZURE_CONTAINER_NAM
     blob_url = f"https://{account_name}.blob.core.windows.net/" + \
         f"{container_name}/{blob_name}?{sas_token}"
     return blob_url
+
+
+def upload_blob(data: bytes , blob_url: str):
+    try:
+        blob_client_sas = BlobClient.from_blob_url(blob_url=blob_url)
+        blob_client_sas.upload_blob(data, overwrite=True)
+        return True
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=e.message)
+
+def download_blob(blob_url: str):
+    try:
+        blob_client_sas = BlobClient.from_blob_url(blob_url=blob_url)
+        blob_data = blob_client_sas.download_blob().chunks()
+        return blob_data
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=e.message)
+    
+def delete_blob(blob_url: str):
+    try:
+        blob_client_sas = BlobClient.from_blob_url(blob_url=blob_url)
+        blob_client_sas.delete_blob()
+        return True
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=e.message)
+    
