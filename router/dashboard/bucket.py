@@ -21,7 +21,7 @@ async def get_bucket_list(req: Request, project_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    data, count = supabase.rpc("verify_project", {"user_id": user, "project_id": project_id}).execute()
+    data, count = supabase.rpc("verify_project", {"user_id": str(user), "project_id": project_id}).execute()
     if not data[1]:
         raise HTTPException(status_code=401, detail="Unauthorized")
     res = read_bucket_list(project_id)
@@ -38,7 +38,7 @@ async def get_bucket(req: Request, bucket_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    data, count = supabase.rpc("verify_bucket", {"user_id": user, "bucket_id": bucket_id}).execute()
+    data, count = supabase.rpc("verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     if not data[1]:
         raise HTTPException(status_code=401, detail="Unauthorized")
     res = read_bucket(bucket_id)
@@ -56,7 +56,7 @@ async def add_bucket(req: Request, bucket: schemas.BucketCreate):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    data, count = supabase.rpc("verify_project", {"user_id": user, "project_id": bucket.get("project_id", "")}).execute()
+    data, count = supabase.rpc("verify_project", {"user_id": str(user), "project_id": str(bucket.project_id)}).execute()
     if not data[1]:
         raise HTTPException(status_code=401, detail="Unauthorized")
     res = create_bucket(bucket)
@@ -73,7 +73,7 @@ async def change_bucket(req: Request, bucket: schemas.BucketUpdate):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    if not user == bucket["manager_id"]:
+    if not user == bucket.manager_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
     res = update_bucket(bucket)
     return JSONResponse(content={
