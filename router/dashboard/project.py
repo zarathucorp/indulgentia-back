@@ -40,7 +40,8 @@ async def get_project_list_by_current_user(req: Request):
     data, count = supabase.table("user_setting").select(
         "team_id").eq("id", user).execute()
     if not data[1]:
-        raise HTTPException(status_code=500, detail="Supabase Error")
+        # raise HTTPException(status_code=500, detail="Supabase Error")
+        raise HTTPException(status_code=400, detail="Unauthorized")
     res = read_project_list(data[1][0].get("team_id"))
     return JSONResponse(content={
         "status": "succeed",

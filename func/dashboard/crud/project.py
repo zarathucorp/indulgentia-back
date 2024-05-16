@@ -45,8 +45,6 @@ def read_project_list(team_id: UUID4):
             '*').eq("is_deleted", False).eq("team_id", team_id).execute()
         print('='*120)
         print(data, count)
-        if not data[1]:
-            raise HTTPException(status_code=400, detail="No data")
         return data[1]
     except Exception as e:
         print('='*120)
