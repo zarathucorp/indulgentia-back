@@ -19,9 +19,11 @@ def create_bucket(bucket: schemas.BucketCreate):
         print(e)
         raise HTTPException(status_code=400, detail=str(e))
 
+
 def read_bucket(bucket_id: UUID4):
     try:
-        data, count = supabase.table("bucket").select('*').eq("is_deleted", False).eq("id", bucket_id).execute()
+        data, count = supabase.table("bucket").select(
+            '*').eq("is_deleted", False).eq("id", bucket_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -31,10 +33,12 @@ def read_bucket(bucket_id: UUID4):
         print('='*120)
         print(e)
         raise HTTPException(status_code=400, detail=str(e))
-    
+
+
 def read_bucket_list(project_id: UUID4):
     try:
-        data, count = supabase.table("bucket").select('*').eq("is_deleted", False).eq("project_id", project_id).execute()
+        data, count = supabase.table("bucket").select(
+            '*').eq("is_deleted", False).eq("project_id", project_id).execute()
         print('='*120)
         print(data, count)
         return data[1]
@@ -43,10 +47,12 @@ def read_bucket_list(project_id: UUID4):
         print(e)
         raise HTTPException(status_code=400, detail=str(e))
 
+
 def update_bucket(bucket: schemas.BucketUpdate):
     try:
-        bucket = bucket.model_dump()
-        data, count = supabase.table("bucket").update(bucket).eq("id", bucket["id"]).execute()
+        bucket = bucket.model_dump(mode="json")
+        data, count = supabase.table("bucket").update(
+            bucket).eq("id", bucket["id"]).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -57,9 +63,11 @@ def update_bucket(bucket: schemas.BucketUpdate):
         print(e)
         raise HTTPException(status_code=400, detail=str(e))
 
+
 def flag_is_deleted_bucket(bucket_id: UUID4):
     try:
-        data, count = supabase.table("bucket").update({"is_deleted": True}).eq("id", bucket_id).execute()
+        data, count = supabase.table("bucket").update(
+            {"is_deleted": True}).eq("id", bucket_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -71,9 +79,12 @@ def flag_is_deleted_bucket(bucket_id: UUID4):
         raise HTTPException(status_code=400, detail=str(e))
 
 # Old version
+
+
 def delete_bucket(bucket_id: UUID4):
     try:
-        data, count = supabase.table("bucket").delete().eq("id", bucket_id).execute()
+        data, count = supabase.table("bucket").delete().eq(
+            "id", bucket_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
@@ -83,4 +94,3 @@ def delete_bucket(bucket_id: UUID4):
         print('='*120)
         print(e)
         raise HTTPException(status_code=400, detail=str(e))
-    
