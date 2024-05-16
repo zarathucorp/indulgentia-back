@@ -36,12 +36,12 @@ async def add_signature(req: Request, file: UploadFile = File(...)):
     blob_url = generate_presigned_url(str(user), container_name=SIGNATURE_AZURE_CONTAINER_NAME)
     res = upload_blob(blob_url, data)
     if res:
-        data, count = supabase.table("user_setting").update({"signature": True}).eq("id", user).execute()
+        data, count = supabase.table("user_setting").update({"has_signature": True}).eq("id", user).execute()
         if not data[1]:
             raise HTTPException(status_code=500, detail="Internal Server Error")
         return JSONResponse(content={
             "status": "succeed",
-            "signature": data[1].get("signature")
+            "has_signature": data[1].get("has_signature")
         })
     else:
         return JSONResponse(content={
@@ -57,12 +57,12 @@ def drop_signature(req: Request):
     blob_url = generate_presigned_url(str(user), container_name=SIGNATURE_AZURE_CONTAINER_NAME)
     res = delete_blob(blob_url)
     if res:
-        data, count = supabase.table("user_setting").update({"signature": False}).eq("id", user).execute()
+        data, count = supabase.table("user_setting").update({"has_signature": False}).eq("id", user).execute()
         if not data[1]:
             raise HTTPException(status_code=500, detail="Internal Server Error")
         return JSONResponse(content={
             "status": "succeed",
-            "signature": data[1].get("signature")
+            "has_signature": data[1].get("has_signature")
         })
     else:
         return JSONResponse(content={
