@@ -91,7 +91,7 @@ async def change_project(req: Request, project: schemas.ProjectUpdate):
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     data, count = supabase.rpc("verify_project", {
-                               "user_id": user, "project_id": project.get("id", "")}).execute()
+                               "user_id": user, "project_id": project.id}).execute()
     if not data[1]:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
