@@ -16,7 +16,7 @@ router = APIRouter(
 SIGNATURE_AZURE_CONTAINER_NAME = DEFAULT_AZURE_CONTAINER_NAME
 
 
-@router.get("/signature", tags=["user", "settings"])
+@router.get("/signature", tags=["settings"])
 def get_signature(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
@@ -27,7 +27,7 @@ def get_signature(req: Request):
     return FileResponse(res)
 
 
-@router.post("/signature", tags=["user", "settings"])
+@router.post("/signature", tags=["settings"])
 async def add_signature(req: Request, file: UploadFile = File(...)):
     user: UUID4 = verify_user(req)
     if not user:
@@ -49,7 +49,7 @@ async def add_signature(req: Request, file: UploadFile = File(...)):
         })
 
 
-@router.delete("/signature", tags=["user", "settings"])
+@router.delete("/signature", tags=["settings"])
 def drop_signature(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
