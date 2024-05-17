@@ -28,30 +28,22 @@ def generate_presigned_url(blob_name, container_name=DEFAULT_AZURE_CONTAINER_NAM
     return blob_url
 
 
-def upload_blob(data: bytes , blob_url: str):
+def upload_blob(data: bytes , blob_name: str):
     try:
-        blob_client_sas = BlobClient.from_blob_url(blob_url=blob_url)
-        blob_client_sas.upload_blob(data, overwrite=True)
+        blob_client = azure_blob_client.get_blob_client(container=DEFAULT_AZURE_CONTAINER_NAME, blob=blob_name)
+        blob_client.upload_blob(data, overwrite=True)
         return True
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
 
-def download_blob(blob_url: str):
-    try:
-        blob_client_sas = BlobClient.from_blob_url(blob_url=blob_url)
-        blob_data = blob_client_sas.download_blob().chunks()
-        return blob_data
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail=e.message)
     
-def delete_blob(blob_url: str):
+def delete_blob(blob_name: str):
     try:
-        blob_client_sas = BlobClient.from_blob_url(blob_url=blob_url)
-        blob_client_sas.delete_blob()
+        blob_client = azure_blob_client.get_blob_client(container=DEFAULT_AZURE_CONTAINER_NAME, blob=blob_name)
+        blob_client.delete_blob()
         return True
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
     
