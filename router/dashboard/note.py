@@ -23,7 +23,7 @@ async def get_note_list(req: Request, bucket_id: str):
         raise HTTPException(status_code=401, detail="Unauthorized")
     data, count = supabase.rpc("verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     if not data[1]:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="Forbidden")
     res = read_note_list(bucket_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -40,7 +40,7 @@ async def get_note(req: Request, note_id: str):
         raise HTTPException(status_code=401, detail="Unauthorized")
     data, count = supabase.rpc("verify_note", {"user_id": user, "note_id": note_id}).execute()
     if not data[1]:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="Forbidden")
     res = read_note(note_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -59,7 +59,7 @@ async def add_note(req: Request, note: schemas.NoteCreate):
         raise HTTPException(status_code=401, detail="Unauthorized")
     data, count = supabase.rpc("verify_bucket", {"user_id": user, "bucket_id": note.get("bucket_id", "")}).execute()
     if not data[1]:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="Forbidden")
     
     # need verify timestamp logic
 
@@ -78,7 +78,7 @@ async def change_note(req: Request, note: schemas.NoteUpdate):
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     if not user == note.user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="Forbidden")
     
     # need verify timestamp logic
 
@@ -100,7 +100,7 @@ async def drop_note(req: Request, note_id: str):
     if not data[1]:
         raise HTTPException(status_code=400, detail="No data")
     if not user == data[1][0]["user_id"]:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="Forbidden")
     res = flag_is_deleted_note(note_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -134,3 +134,18 @@ async def get_note_file(req: Request, note_id: str):
         return JSONResponse(content={"status": "succeed", "url": url})
     except Exception as e:
         return JSONResponse(status_code=400, content={"status": "failed", "message": str(e)})
+
+
+@router.get("/{note_id}/breadcrumb")
+async def get_breadcrumb(req: Request, note_id: str):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    data, count = supabase.rpc(
+        "note_breadcrumb_data", {"note_id": note_id}).execute()
+    if not data[1]:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data[1][0]
+    })

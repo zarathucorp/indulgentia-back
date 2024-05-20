@@ -24,7 +24,7 @@ async def get_project_list(req: Request, team_id: str):
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     if not verify_team(user, team_id):
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="Forbidden")
     res = read_project_list(team_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -41,7 +41,7 @@ async def get_project_list_by_current_user(req: Request):
         "team_id").eq("id", user).execute()
     if not data[1]:
         # raise HTTPException(status_code=500, detail="Supabase Error")
-        raise HTTPException(status_code=400, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="Forbidden")
     res = read_project_list(data[1][0].get("team_id"))
     return JSONResponse(content={
         "status": "succeed",
@@ -59,7 +59,7 @@ async def get_project(req: Request, project_id: str):
     data, count = supabase.rpc(
         "verify_project", {"user_id": str(user), "project_id": project_id}).execute()
     if not data[1]:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="Forbidden")
     res = read_project(project_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -74,9 +74,9 @@ async def get_project(req: Request, project_id: str):
 async def add_project(req: Request, project: schemas.ProjectCreate):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized - user")
+        raise HTTPException(status_code=401, detail="Unauthorized")
     if not verify_team(user, project.team_id):
-        raise HTTPException(status_code=401, detail="Unauthorized - team")
+        raise HTTPException(status_code=403, detail="Forbidden")
     res = create_project(project)
     return JSONResponse(content={
         "status": "succeed",
@@ -94,11 +94,11 @@ async def change_project(req: Request, project: schemas.ProjectUpdate):
     data, count = supabase.rpc("verify_project", {
                                "user_id": str(user), "project_id": str(project.id)}).execute()
     if not data[1]:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     # # need verify project_leader?
     # if not user == project["project_leader"]:  # not working
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
+        # raise HTTPException(status_code=403, detail="Forbidden")
 
     res = update_project(project)
     return JSONResponse(content={
@@ -117,11 +117,11 @@ async def drop_project(req: Request, project_id: str):
     data, count = supabase.rpc(
         "verify_project", {"user_id": str(user), "project_id": project_id}).execute()
     if not data[1]:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     # # need verify project_leader?
     # if not user == project["project_leader"]:  # not working
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
+        # raise HTTPException(status_code=403, detail="Forbidden")
 
     res = flag_is_deleted_project(project_id)
     return JSONResponse(content={
