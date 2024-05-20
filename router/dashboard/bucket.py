@@ -122,3 +122,18 @@ async def drop_bucket(req: Request, bucket_id: str):
         "data": res
    })
 """
+
+
+@router.get("/{bucket_id}/breadcrumb")
+async def get_breadcrumb(req: Request, bucket_id: str):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    data, count = supabase.rpc(
+        "bucket_breadcrumb_data", {"bucket_id": bucket_id}).execute()
+    if not data[1]:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data[1][0]
+    })

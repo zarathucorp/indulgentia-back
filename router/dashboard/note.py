@@ -134,3 +134,18 @@ async def get_note_file(req: Request, note_id: str):
         return JSONResponse(content={"status": "succeed", "url": url})
     except Exception as e:
         return JSONResponse(status_code=400, content={"status": "failed", "message": str(e)})
+
+
+@router.get("/{note_id}/breadcrumb")
+async def get_breadcrumb(req: Request, note_id: str):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    data, count = supabase.rpc(
+        "note_breadcrumb_data", {"note_id": note_id}).execute()
+    if not data[1]:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data[1][0]
+    })
