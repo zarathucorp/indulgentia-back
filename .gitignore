@@ -162,3 +162,11 @@ poetry.toml
 
 # LSP config files
 pyrightconfig.json
+
+# test dummy files
+*.png
+*.jpg
+*.pdf
+*.docx
+*.pptx
+*.hwpx

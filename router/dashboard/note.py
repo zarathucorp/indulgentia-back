@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from pydantic import UUID4
-from cloud.azure.blob_storage import generate_presigned_url
+from typing import List
+
+from cloud.azure.blob_storage import *
 from database import schemas
 from func.dashboard.crud.note import *
 from func.auth.auth import *
+from func.dashboard.pdf_generator.pdf_generator import generate_pdf
 
 
 router = APIRouter(
@@ -53,17 +56,39 @@ async def get_note(req: Request, note_id: str):
 
 
 @router.post("/", tags=["note"])
-async def add_note(req: Request, note: schemas.NoteCreate):
-    user: UUID4 = verify_user(req)
-    if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    data, count = supabase.rpc("verify_bucket", {"user_id": user, "bucket_id": note.get("bucket_id", "")}).execute()
-    if not data[1]:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+async def add_note(files: List[UploadFile], bucket_id: UUID4 = Form(...), title: str = Form(...), file_name: str = Form(...), is_github: bool = Form(...), description: str = None):
+    # user: UUID4 = verify_user(req)
+    # if not user:
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    # data, count = supabase.rpc("verify_bucket", {"user_id": user, "bucket_id": note.get("bucket_id", "")}).execute()
+    # if not data[1]:
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Test user
+    from uuid import UUID
+    user = UUID("6a423db5-8a34-4153-9795-c6f058020445", version=4)
     
     # need verify timestamp logic
 
+    note = schemas.NoteCreate(user_id=user, bucket_id=bucket_id, title=title, file_name=file_name, is_github=is_github, description=description, is_deleted=False)
     res = create_note(note)
+    # create pdf
+    try:
+        contents = []
+        for file in files:
+            contents.append(await file.read())
+        pdf_res = generate_pdf(note_id=res.get("id"), description=description, files=files, contents=contents)
+        print(pdf_res)
+        if not pdf_res:
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+        # upload pdf
+        with open(pdf_res, "rb") as f:
+            pdf_data = f.read()
+        await upload_blob(pdf_data, note.id + ".pdf")
+    except Exception as e:
+        delete_note(res.get("id"))
+        raise HTTPException(status_code=500, detail=str(e))
+
     return JSONResponse(content={
         "status": "succeed",
         "data": res
