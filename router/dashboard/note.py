@@ -56,13 +56,22 @@ async def get_note(req: Request, note_id: str):
 
 @router.post("/", tags=["note"])
 # file: Optional[UploadFile] = File(None)
-async def add_note(req: Request, bucket_id: UUID4 = Form(...),
+async def add_note(req: Request,
+                   bucket_id: UUID4 = Form(...),
                    title: str = Form(...),
                    file_name: str = Form(...),
                    is_github: bool = Form(...),
                    files: List[UploadFile] = File(None)
                    ):
     user: UUID4 = verify_user(req)
+
+    note = schemas.NoteCreate(
+        bucket_id=bucket_id,
+        user_id=user,
+        title=title,
+        file_name=file_name,
+        is_github=is_github
+    )
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     if files:
@@ -72,24 +81,23 @@ async def add_note(req: Request, bucket_id: UUID4 = Form(...),
             with open(f'{file.filename}', 'wb') as f:
                 f.write(contents)
 
-    return {}
-
-    # data, count = supabase.rpc("verify_bucket", {
-    #     "user_id": user, "bucket_id": note.get("bucket_id", "")}).execute()
+    data, count = supabase.rpc("verify_bucket", {
+        "user_id": user, "bucket_id": str(note.bucket_id)}).execute()
     # if not data[1]:
     #     raise HTTPException(status_code=403, detail="Forbidden")
+    res = create_note(note)
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": res
+    })
+
     # need verify timestamp logic
 
-    # res = create_note(note)
-    # return JSONResponse(content={
-    #     "status": "succeed",
-    #     "data": res
-    # })
 
 # update
 
 
-@router.put("/{note_id}", tags=["note"])
+@ router.put("/{note_id}", tags=["note"])
 async def change_note(req: Request, note: schemas.NoteUpdate):
     user: UUID4 = verify_user(req)
     if not user:
@@ -108,7 +116,7 @@ async def change_note(req: Request, note: schemas.NoteUpdate):
 # delete
 
 
-@router.delete("/{note_id}", tags=["note"])
+@ router.delete("/{note_id}", tags=["note"])
 async def drop_note(req: Request, note_id: str):
     user: UUID4 = verify_user(req)
     if not user:
@@ -145,7 +153,7 @@ async def drop_note(req: Request, note_id: str):
 """
 
 
-@router.get("/file/{note_id}")
+@ router.get("/file/{note_id}")
 async def get_note_file(req: Request, note_id: str):
     # Auth 먼저 해야함
     try:
@@ -155,7 +163,7 @@ async def get_note_file(req: Request, note_id: str):
         return JSONResponse(status_code=400, content={"status": "failed", "message": str(e)})
 
 
-@router.get("/{note_id}/breadcrumb")
+@ router.get("/{note_id}/breadcrumb")
 async def get_breadcrumb(req: Request, note_id: str):
     user: UUID4 = verify_user(req)
     if not user:
