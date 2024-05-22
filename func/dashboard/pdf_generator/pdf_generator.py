@@ -6,7 +6,8 @@ from pydantic import UUID4, BaseModel
 from fastapi import HTTPException, UploadFile, File
 from uuid import UUID
 from typing import List, Union
-import os, shutil
+import os
+import shutil
 import subprocess
 import re
 
@@ -18,20 +19,20 @@ import re
 #             self.set_font("Pretendard", "B", 12)
 #             self.cell(0, 10, user_id, 0, 1, "C")
 #             self.ln(10)
-        
+
 #         def footer(self):
 #             self.add_font("Pretendard", style="I", fname="Pretendard-Thin.ttf")
 #             self.set_y(-15)
 #             self.set_font("Pretendard", "I", 8)
 #             self.cell(0, 10, f"Page {self.page_no()}", 0, 0, "R")
-    
+
 #     pdf = PDF()
 #     pdf.add_font("Pretendard", style="", fname="Pretendard-Regular.ttf")
 #     pdf.set_font("Pretendard", size=12)
 
 #     if len(files) != len(descriptions):
 #         raise HTTPException(status_code=400, detail="Number of files and descriptions do not match")
-    
+
 #     num_pages = len(descriptions)
 
 #     for idx in num_pages:
@@ -57,7 +58,7 @@ import re
 #             if image_width > max_image_width:
 #                 image_width = max_image_width
 #                 image_height = image.height * image_width / image.width
-                
+
 #             image_y = (pdf.h - image_height) / 2  # Center the image
 #             image_x = (pdf.w - image_width) / 2
 #             pdf.image(raw_image, x=image_x, y=image_y, h=image_height, w=image_width)
@@ -79,12 +80,13 @@ import re
 #     return res
 
 # MS office & HWP to PDF
-def convert_doc_to_pdf(source_path:str, file_name:str, extension:str):
-    subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf", f"{source_path}/input/{file_name}.{extension}", "--outdir", f"{source_path}/output"])
+def convert_doc_to_pdf(source_path: str, file_name: str, extension: str):
+    subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf",
+                   f"{source_path}/input/{file_name}.{extension}", "--outdir", f"{source_path}/output"])
     return f"{file_name}.pdf"
 
 
-def generate_pdf(note_id:str, description:str, files=List[UploadFile], contents=List[bytes]):
+def generate_pdf(note_id: str, description: str, files=List[UploadFile], contents=List[bytes]):
     source_path = "func/dashboard/pdf_generator"
     for folder in ["/input", "/output"]:
         for filename in os.listdir(source_path + folder):
@@ -94,7 +96,8 @@ def generate_pdf(note_id:str, description:str, files=List[UploadFile], contents=
                     os.unlink(file_path)
             except Exception as e:
                 print(e)
-    DOC_EXTENSIONS = ["doc", "docx", "hwp", "hwpx", "ppt", "pptx", "xls", "xlsx"]
+    DOC_EXTENSIONS = ["doc", "docx", "hwp",
+                      "hwpx", "ppt", "pptx", "xls", "xlsx"]
     IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "bmp"]
     A4_SIZE = (595, 842)
 
@@ -105,7 +108,7 @@ def generate_pdf(note_id:str, description:str, files=List[UploadFile], contents=
         with open(f"{source_path}/input/{filename}.{extension}", 'wb') as f:
             f.write(contents[idx])
             print(f"{source_path}/input/{filename}.{extension} saved")
-            
+
         if extension in DOC_EXTENSIONS:
             res = convert_doc_to_pdf(source_path, filename, extension)
             print(f"{source_path}/output/{res} saved")
@@ -119,35 +122,40 @@ def generate_pdf(note_id:str, description:str, files=List[UploadFile], contents=
                 background.save(f"{source_path}/output/{filename}.pdf")
             else:
                 image.save(f"{source_path}/output/{filename}.pdf")
-            
+
             print(f"{source_path}/output/{filename}.pdf saved")
         else:
             # pdf file
             with open(f"{source_path}/output/{filename}.{extension}", 'wb') as f:
                 f.write(contents[idx])
                 print(f"{source_path}/output/{filename}.pdf saved")
-    
+
     # description to pdf
     if description:
         pdf = FPDF()
-        pdf.add_font("Pretendard", style="", fname=f"{source_path}/Pretendard-Regular.ttf")
+        pdf.add_font("Pretendard", style="", fname=f"{
+                     source_path}/Pretendard-Regular.ttf")
         pdf.set_font("Pretendard", size=12)
         pdf.add_page()
-        description = description.encode("utf-8")[:2000].decode("utf-8", "ignore") if description else None # Limit description to 2000 characters
+        # Limit description to 2000 characters
+        description = description.encode(
+            "utf-8")[:2000].decode("utf-8", "ignore") if description else None
         pdf.multi_cell(0, 10, description)
         res = pdf.output()
         with open(f"{source_path}/output/{note_id}_description.pdf", 'wb') as f:
             f.write(res)
             print(f"{source_path}/output/{note_id}_description.pdf saved")
-    
+
     # merge pdfs
-    pdfs = [f"{source_path}/output/{note_id}_{idx}.pdf" for idx in range(len(files))]
-    pdfs.append(f"{source_path}/output/{note_id}_description.pdf") if description else None
+    pdfs = [
+        f"{source_path}/output/{note_id}_{idx}.pdf" for idx in range(len(files))]
+    pdfs.append(
+        f"{source_path}/output/{note_id}_description.pdf") if description else None
     pdfmerge(pdfs, f"{source_path}/output/{note_id}.pdf")
     print(f"{source_path}/output/{note_id}.pdf saved")
     print("Success!")
 
-    return f"{source_path}/output/{note_id}.pdf"            
+    return f"{source_path}/output/{note_id}.pdf"
 
 # # testing
 # convert_doc_to_pdf("func/dashboard/pdf_generator", "3d4256d9-20e8-4acc-9c51-42c90b4456ab_0", "docx")
