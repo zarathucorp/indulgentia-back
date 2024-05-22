@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import UUID4
 from typing import Optional, List
+import os
 import uuid
 
 from cloud.azure.blob_storage import *
@@ -106,6 +107,12 @@ async def add_note(req: Request,
         res_e = delete_note(str(note_id))
         print(res_e)
         raise HTTPException(status_code=500, detail=str(e))
+
+    # delete result pdf
+    SOURCE_PATH = "func/dashboard/pdf_generator"
+    if os.path.isfile(f"{SOURCE_PATH}/output/{note_id}.pdf"):
+        os.unlink(f"{SOURCE_PATH}/output/{note_id}.pdf")
+        print(f"{SOURCE_PATH}/output/{note_id}.pdf deleted")
 
     res = create_note(note)
     return JSONResponse(content={
