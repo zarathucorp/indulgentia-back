@@ -170,3 +170,6 @@ pyrightconfig.json
 *.docx
 *.pptx
 *.hwpx
+
+# macOS files
+.DS_Store

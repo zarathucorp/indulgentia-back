@@ -24,7 +24,7 @@ async def get_bucket_list(req: Request, project_id: str):
     data, count = supabase.rpc(
         "verify_project", {"user_id": str(user), "project_id": project_id}).execute()
     if not data[1]:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="Forbidden")
     res = read_bucket_list(project_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -42,7 +42,7 @@ async def get_bucket(req: Request, bucket_id: str):
     data, count = supabase.rpc(
         "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     if not data[1]:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="Forbidden")
     res = read_bucket(bucket_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -61,7 +61,7 @@ async def add_bucket(req: Request, bucket: schemas.BucketCreate):
     data, count = supabase.rpc("verify_project", {"user_id": str(
         user), "project_id": str(bucket.project_id)}).execute()
     if not data[1]:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="Forbidden")
     res = create_bucket(bucket)
     return JSONResponse(content={
         "status": "succeed",
@@ -77,7 +77,7 @@ async def change_bucket(req: Request, bucket: schemas.BucketUpdate):
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     # if not user == bucket.manager_id:
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
+        # raise HTTPException(status_code=403, detail="Forbidden")
     res = update_bucket(bucket)
     return JSONResponse(content={
         "status": "succeed",
@@ -96,8 +96,8 @@ async def drop_bucket(req: Request, bucket_id: str):
         "manager_id").eq("id", bucket_id).execute()
     if not data[1]:
         raise HTTPException(status_code=400, detail="No data")
-    if not user == data[1][0]["manager_id"]:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    # if not user == data[1][0]["manager_id"]:
+        # raise HTTPException(status_code=403, detail="Forbidden")
     res = flag_is_deleted_bucket(bucket_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -122,3 +122,18 @@ async def drop_bucket(req: Request, bucket_id: str):
         "data": res
    })
 """
+
+
+@router.get("/{bucket_id}/breadcrumb")
+async def get_breadcrumb(req: Request, bucket_id: str):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    data, count = supabase.rpc(
+        "bucket_breadcrumb_data", {"bucket_id": bucket_id}).execute()
+    if not data[1]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data[1][0]
+    })
