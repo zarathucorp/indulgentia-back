@@ -70,7 +70,7 @@ async def add_note(req: Request,
     user: UUID4 = verify_user(req)
     note_id = uuid.uuid4()
     note = schemas.NoteCreate(
-        id = note_id,
+        id=note_id,
         bucket_id=bucket_id,
         user_id=user,
         title=title,
@@ -79,14 +79,15 @@ async def add_note(req: Request,
     )
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    data, count = supabase.rpc("verify_bucket", {"user_id": user, "bucket_id": note.get("bucket_id", "")}).execute()
+    data, count = supabase.rpc(
+        "verify_bucket", {"user_id": str(user), "bucket_id": str(note.bucket_id)}).execute()
     if not data[1]:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     # # Test user
     # from uuid import UUID
     # user = UUID("6a423db5-8a34-4153-9795-c6f058020445", version=4)
-    
+
     # need verify timestamp logic
 
     # create pdf
@@ -94,14 +95,15 @@ async def add_note(req: Request,
         contents = []
         for file in files:
             contents.append(await file.read())
-        pdf_res = generate_pdf(note_id=res.get("id"), description=description, files=files, contents=contents)
+        pdf_res = generate_pdf(
+            note_id=str(note_id), description=description, files=files, contents=contents)
         # upload pdf
         with open(pdf_res, "rb") as f:
             pdf_data = f.read()
-        upload_blob(pdf_data, note_id + ".pdf")
+        upload_blob(pdf_data, str(note_id) + ".pdf")
     except Exception as e:
         print(e)
-        res_e = delete_note(note_id)
+        res_e = delete_note(str(note_id))
         print(res_e)
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -133,8 +133,8 @@ def generate_pdf(note_id: str, description: str, files=List[UploadFile], content
     # description to pdf
     if description:
         pdf = FPDF()
-        pdf.add_font("Pretendard", style="", fname=f"{
-                     source_path}/Pretendard-Regular.ttf")
+        pdf.add_font("Pretendard", style="",
+                     fname=f"{source_path}/Pretendard-Regular.ttf")
         pdf.set_font("Pretendard", size=12)
         pdf.add_page()
         # Limit description to 2000 characters
