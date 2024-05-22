@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 from pydantic import UUID4
-from typing import List
+from typing import Optional, List
+import uuid
 
 from cloud.azure.blob_storage import *
 from database import schemas
 from func.dashboard.crud.note import *
 from func.auth.auth import *
 from func.dashboard.pdf_generator.pdf_generator import generate_pdf
-from typing import Optional, List
 
 
 router = APIRouter(
@@ -68,8 +68,9 @@ async def add_note(req: Request,
                    description: str = Form(None)
                    ):
     user: UUID4 = verify_user(req)
-
+    note_id = uuid.uuid4()
     note = schemas.NoteCreate(
+        id = note_id,
         bucket_id=bucket_id,
         user_id=user,
         title=title,
@@ -88,9 +89,6 @@ async def add_note(req: Request,
     
     # need verify timestamp logic
 
-    note = schemas.NoteCreate(user_id=user, bucket_id=bucket_id, title=title, file_name=file_name, is_github=is_github, description=description, is_deleted=False)
-    res = create_note(note)
-    note_id = res.get("id")
     # create pdf
     try:
         contents = []
@@ -107,6 +105,7 @@ async def add_note(req: Request,
         print(res_e)
         raise HTTPException(status_code=500, detail=str(e))
 
+    res = create_note(note)
     return JSONResponse(content={
         "status": "succeed",
         "data": res
