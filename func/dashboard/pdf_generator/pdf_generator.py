@@ -99,7 +99,12 @@ def generate_pdf(note_id: str, description: str, files=List[UploadFile], content
     DOC_EXTENSIONS = ["doc", "docx", "hwp",
                       "hwpx", "ppt", "pptx", "xls", "xlsx"]
     IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "bmp"]
+    AVAILABLE_EXTENSIONS = DOC_EXTENSIONS + IMAGE_EXTENSIONS + ["pdf"]
     A4_SIZE = (595, 842)
+
+    if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
+        raise HTTPException(
+            status_code=422, detail="Unprocessable file extension")
 
     for idx, file in enumerate(files):
         extension = file.filename.split(".")[-1]
