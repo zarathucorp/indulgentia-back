@@ -6,7 +6,7 @@ from pydantic import UUID4, BaseModel
 from fastapi import HTTPException, UploadFile, File
 from uuid import UUID
 from typing import List, Union
-import sys
+import os, shutil
 import subprocess
 import re
 
@@ -79,66 +79,75 @@ import re
 #     return res
 
 # MS office & HWP to PDF
-def convert_doc_to_pdf(filename:str):
-    subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf", f"./input/{filename}", "--outdir", "./output"])
-    return f"{filename}.pdf"
+def convert_doc_to_pdf(source_path:str, file_name:str, extension:str):
+    subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf", f"{source_path}/input/{file_name}.{extension}", "--outdir", f"{source_path}/output"])
+    return f"{file_name}.pdf"
 
 
 def generate_pdf(note_id:str, description:str, files=List[UploadFile], contents=List[bytes]):
-    DOC_EXTENSIONS = ["doc", "docx", "hwp"]
+    source_path = "func/dashboard/pdf_generator"
+    for folder in ["/input", "/output"]:
+        for filename in os.listdir(source_path + folder):
+            file_path = os.path.join(source_path + folder, filename)
+            try:
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+            except Exception as e:
+                print(e)
+    DOC_EXTENSIONS = ["doc", "docx", "hwp", "hwpx", "ppt", "pptx", "xls", "xlsx"]
     IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "bmp"]
+    A4_SIZE = (595, 842)
 
     for idx, file in enumerate(files):
         extension = file.filename.split(".")[-1]
-        filename = f"{note_id}_{idx}.{extension}"
+        filename = f"{note_id}_{idx}"
 
-        with open(f"./input/{filename}", 'wb') as f:
+        with open(f"{source_path}/input/{filename}.{extension}", 'wb') as f:
             f.write(contents[idx])
-            print(f"input/{filename} saved")
+            print(f"{source_path}/input/{filename}.{extension} saved")
             
         if extension in DOC_EXTENSIONS:
-            res = convert_doc_to_pdf(filename)
-            print(f"./output/{res} saved")
+            res = convert_doc_to_pdf(source_path, filename, extension)
+            print(f"{source_path}/output/{res} saved")
         elif extension in IMAGE_EXTENSIONS:
-            image = Image.open(f"./input/{filename}")
-            if extension == "png":
+            image = Image.open(f"{source_path}/input/{filename}.{extension}")
+            image.thumbnail(A4_SIZE)
+            if image.mode == "RGBA":
                 image.load()
                 background = Image.new("RGB", image.size, (255, 255, 255))
                 background.paste(image, mask=image.split()[3])
-                background.save(f"./output/{filename}.pdf")
+                background.save(f"{source_path}/output/{filename}.pdf")
             else:
-                image.save(f"./output/{filename}.pdf")
+                image.save(f"{source_path}/output/{filename}.pdf")
             
-            print(f"output/{filename}.pdf saved")
+            print(f"{source_path}/output/{filename}.pdf saved")
         else:
             # pdf file
-            with open(f"./output/{filename}", 'wb') as f:
-                f.write(contents)
-                print(f"output/{filename} saved")
+            with open(f"{source_path}/output/{filename}.{extension}", 'wb') as f:
+                f.write(contents[idx])
+                print(f"{source_path}/output/{filename}.pdf saved")
     
     # description to pdf
     if description:
         pdf = FPDF()
-        pdf.add_font("Pretendard", style="", fname="Pretendard-Regular.ttf")
+        pdf.add_font("Pretendard", style="", fname=f"{source_path}/Pretendard-Regular.ttf")
         pdf.set_font("Pretendard", size=12)
         pdf.add_page()
         description = description.encode("utf-8")[:2000].decode("utf-8", "ignore") if description else None # Limit description to 2000 characters
         pdf.multi_cell(0, 10, description)
         res = pdf.output()
-        with open(f"./output/{note_id}_description.pdf", 'wb') as f:
+        with open(f"{source_path}/output/{note_id}_description.pdf", 'wb') as f:
             f.write(res)
-            print(f"output/{note_id}_description.pdf saved")
+            print(f"{source_path}/output/{note_id}_description.pdf saved")
     
     # merge pdfs
-    pdfs = [f"./output/{note_id}_{idx}.pdf" for idx in range(len(files))]
-    pdfs.append(f"./output/{note_id}_description.pdf") if description else None
-    pdfmerge(pdfs, f"./output/{note_id}.pdf")
-    print(f"output/{note_id}.pdf saved")
+    pdfs = [f"{source_path}/output/{note_id}_{idx}.pdf" for idx in range(len(files))]
+    pdfs.append(f"{source_path}/output/{note_id}_description.pdf") if description else None
+    pdfmerge(pdfs, f"{source_path}/output/{note_id}.pdf")
+    print(f"{source_path}/output/{note_id}.pdf saved")
     print("Success!")
 
-    return f"./output/{note_id}.pdf"            
+    return f"{source_path}/output/{note_id}.pdf"            
 
-# Testing
-file_name = "dummy.hwpx"
-
-file = convert_doc_to_pdf(file_name)
+# # testing
+# convert_doc_to_pdf("func/dashboard/pdf_generator", "3d4256d9-20e8-4acc-9c51-42c90b4456ab_0", "docx")
