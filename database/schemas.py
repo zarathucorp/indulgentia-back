@@ -156,6 +156,7 @@ class NoteBase(BaseModel):
 
 
 class NoteCreate(NoteBase):
+    id: UUID4
     is_deleted: bool = False
 
 
