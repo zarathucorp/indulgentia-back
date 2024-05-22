@@ -137,9 +137,10 @@ def generate_pdf(note_id: str, description: str, files=List[UploadFile], content
                      fname=f"{source_path}/Pretendard-Regular.ttf")
         pdf.set_font("Pretendard", size=12)
         pdf.add_page()
-        # Limit description to 2000 characters
-        description = description.encode(
-            "utf-8")[:2000].decode("utf-8", "ignore") if description else None
+        # # Limit description to 2000 characters
+        # description = description.encode(
+        #     "utf-8")[:2000].decode("utf-8", "ignore") if description else None
+        description = description[:1000]
         pdf.multi_cell(0, 10, description)
         res = pdf.output()
         with open(f"{source_path}/output/{note_id}_description.pdf", 'wb') as f:
