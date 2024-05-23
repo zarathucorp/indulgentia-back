@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 import uuid
 from pydantic import UUID4
 from typing import List
+import uuid
 
 from database import supabase, schemas
 from func.auth.auth import *
@@ -20,6 +21,10 @@ router = APIRouter(
 
 @router.get("/list/{team_id}", tags=["project"])
 async def get_project_list(req: Request, team_id: str):
+    try:
+        test_id = uuid.UUID(team_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -53,6 +58,10 @@ async def get_project_list_by_current_user(req: Request):
 
 @router.get("/{project_id}", tags=["project"])
 async def get_project(req: Request, project_id: str):
+    try:
+        test_id = uuid.UUID(team_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -88,6 +97,10 @@ async def add_project(req: Request, project: schemas.ProjectCreate):
 
 @router.put("/{project_id}", tags=["project"])
 async def change_project(req: Request, project: schemas.ProjectUpdate):
+    try:
+        test_id = uuid.UUID(team_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -111,6 +124,10 @@ async def change_project(req: Request, project: schemas.ProjectUpdate):
 
 @router.delete("/{project_id}", tags=["project"])
 async def drop_project(req: Request, project_id: str):
+    try:
+        test_id = uuid.UUID(team_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")

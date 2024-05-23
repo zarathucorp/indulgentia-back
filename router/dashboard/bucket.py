@@ -18,6 +18,10 @@ router = APIRouter(
 
 @router.get("/list/{project_id}", tags=["bucket"])
 async def get_bucket_list(req: Request, project_id: str):
+    try:
+        test_id = uuid.UUID(project_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -36,6 +40,10 @@ async def get_bucket_list(req: Request, project_id: str):
 
 @router.get("/{bucket_id}", tags=["bucket"])
 async def get_bucket(req: Request, bucket_id: str):
+    try:
+        test_id = uuid.UUID(bucket_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -73,6 +81,10 @@ async def add_bucket(req: Request, bucket: schemas.BucketCreate):
 
 @router.put("/{bucket_id}", tags=["bucket"])
 async def change_bucket(req: Request, bucket: schemas.BucketUpdate):
+    try:
+        test_id = uuid.UUID(bucket_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -89,6 +101,10 @@ async def change_bucket(req: Request, bucket: schemas.BucketUpdate):
 
 @router.delete("/{bucket_id}", tags=["bucket"])
 async def drop_bucket(req: Request, bucket_id: str):
+    try:
+        test_id = uuid.UUID(bucket_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -126,6 +142,10 @@ async def drop_bucket(req: Request, bucket_id: str):
 
 @router.get("/{bucket_id}/breadcrumb")
 async def get_breadcrumb(req: Request, bucket_id: str):
+    try:
+        test_id = uuid.UUID(bucket_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
