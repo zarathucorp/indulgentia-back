@@ -81,10 +81,6 @@ async def add_bucket(req: Request, bucket: schemas.BucketCreate):
 
 @router.put("/{bucket_id}", tags=["bucket"])
 async def change_bucket(req: Request, bucket: schemas.BucketUpdate):
-    try:
-        test_id = uuid.UUID(bucket_id)
-    except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")

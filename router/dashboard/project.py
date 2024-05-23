@@ -59,7 +59,7 @@ async def get_project_list_by_current_user(req: Request):
 @router.get("/{project_id}", tags=["project"])
 async def get_project(req: Request, project_id: str):
     try:
-        test_id = uuid.UUID(team_id)
+        test_id = uuid.UUID(project_id)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
@@ -97,10 +97,6 @@ async def add_project(req: Request, project: schemas.ProjectCreate):
 
 @router.put("/{project_id}", tags=["project"])
 async def change_project(req: Request, project: schemas.ProjectUpdate):
-    try:
-        test_id = uuid.UUID(team_id)
-    except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -125,7 +121,7 @@ async def change_project(req: Request, project: schemas.ProjectUpdate):
 @router.delete("/{project_id}", tags=["project"])
 async def drop_project(req: Request, project_id: str):
     try:
-        test_id = uuid.UUID(team_id)
+        test_id = uuid.UUID(project_id)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
