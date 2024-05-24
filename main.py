@@ -17,6 +17,8 @@ app = FastAPI()
 origins = [
     "http://localhost",
     "http://localhost:3000",
+    "https://dev.rndsillog.com",
+    "https://rndsillog.com",
     os.getenv("FRONTEND_URL"),
 ]
 
