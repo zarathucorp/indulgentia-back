@@ -25,4 +25,4 @@ COPY . .
 
 EXPOSE 8000
 
-ENTRYPOINT ["uvicorn", "main:app", "--host=0.0.0.0"]
+ENTRYPOINT ["uvicorn", "main:app", "--host=0.0.0.0", "--reload"]
