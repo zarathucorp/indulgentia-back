@@ -93,39 +93,38 @@ def generate_pdf(note_id: str, description: str, files=List[UploadFile], content
     IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "bmp"]
     AVAILABLE_EXTENSIONS = DOC_EXTENSIONS + IMAGE_EXTENSIONS + ["pdf"]
     A4_SIZE = (595, 842)
+    if files:
+        if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
+            raise HTTPException(
+                status_code=422, detail="Unprocessable file extension")
+        for idx, file in enumerate(files):
+            extension = file.filename.split(".")[-1]
+            filename = f"{note_id}_{idx}"
 
-    if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
-        raise HTTPException(
-            status_code=422, detail="Unprocessable file extension")
-
-    for idx, file in enumerate(files):
-        extension = file.filename.split(".")[-1]
-        filename = f"{note_id}_{idx}"
-
-        with open(f"{SOURCE_PATH}/input/{filename}.{extension}", 'wb') as f:
-            f.write(contents[idx])
-            print(f"{SOURCE_PATH}/input/{filename}.{extension} saved")
-
-        if extension in DOC_EXTENSIONS:
-            res = convert_doc_to_pdf(SOURCE_PATH, filename, extension)
-            print(f"{SOURCE_PATH}/output/{res} saved")
-        elif extension in IMAGE_EXTENSIONS:
-            image = Image.open(f"{SOURCE_PATH}/input/{filename}.{extension}")
-            image.thumbnail(A4_SIZE)
-            if image.mode == "RGBA":
-                image.load()
-                background = Image.new("RGB", image.size, (255, 255, 255))
-                background.paste(image, mask=image.split()[3])
-                background.save(f"{SOURCE_PATH}/output/{filename}.pdf")
-            else:
-                image.save(f"{SOURCE_PATH}/output/{filename}.pdf")
-
-            print(f"{SOURCE_PATH}/output/{filename}.pdf saved")
-        else:
-            # pdf file
-            with open(f"{SOURCE_PATH}/output/{filename}.{extension}", 'wb') as f:
+            with open(f"{SOURCE_PATH}/input/{filename}.{extension}", 'wb') as f:
                 f.write(contents[idx])
+                print(f"{SOURCE_PATH}/input/{filename}.{extension} saved")
+
+            if extension in DOC_EXTENSIONS:
+                res = convert_doc_to_pdf(SOURCE_PATH, filename, extension)
+                print(f"{SOURCE_PATH}/output/{res} saved")
+            elif extension in IMAGE_EXTENSIONS:
+                image = Image.open(f"{SOURCE_PATH}/input/{filename}.{extension}")
+                image.thumbnail(A4_SIZE)
+                if image.mode == "RGBA":
+                    image.load()
+                    background = Image.new("RGB", image.size, (255, 255, 255))
+                    background.paste(image, mask=image.split()[3])
+                    background.save(f"{SOURCE_PATH}/output/{filename}.pdf")
+                else:
+                    image.save(f"{SOURCE_PATH}/output/{filename}.pdf")
+
                 print(f"{SOURCE_PATH}/output/{filename}.pdf saved")
+            else:
+                # pdf file
+                with open(f"{SOURCE_PATH}/output/{filename}.{extension}", 'wb') as f:
+                    f.write(contents[idx])
+                    print(f"{SOURCE_PATH}/output/{filename}.pdf saved")
 
     # description to pdf
     if description:
@@ -145,35 +144,37 @@ def generate_pdf(note_id: str, description: str, files=List[UploadFile], content
             print(f"{SOURCE_PATH}/output/{note_id}_description.pdf saved")
 
     # merge pdfs
-    pdfs = [
-        f"{SOURCE_PATH}/output/{note_id}_{idx}.pdf" for idx in range(len(files))]
+    pdfs = []
+    if files:
+        pdfs = [f"{SOURCE_PATH}/output/{note_id}_{idx}.pdf" for idx in range(len(files))]
     pdfs.append(
         f"{SOURCE_PATH}/output/{note_id}_description.pdf") if description else None
     pdfmerge(pdfs, f"{SOURCE_PATH}/output/{note_id}.pdf")
     print(f"{SOURCE_PATH}/output/{note_id}.pdf saved")
 
     # delete files
-    try:
-        for idx, file in enumerate(files):
-            file_input_path = os.path.join(
-                SOURCE_PATH + "/input/", f"{note_id}_{idx}.{file.filename.split('.')[-1]}")
-            file_output_path = os.path.join(
-                SOURCE_PATH + "/output/", f"{note_id}_{idx}.pdf")
-            if os.path.isfile(file_input_path):
-                os.unlink(file_input_path)
-                print(f"{file_input_path} deleted")
-            if os.path.isfile(file_output_path):
-                os.unlink(file_output_path)
-                print(f"{file_output_path} deleted")
-        else:
-            if description:
+    if files:
+        try:
+            for idx, file in enumerate(files):
+                file_input_path = os.path.join(
+                    SOURCE_PATH + "/input/", f"{note_id}_{idx}.{file.filename.split('.')[-1]}")
                 file_output_path = os.path.join(
-                    SOURCE_PATH + "/output/", f"{note_id}_description.pdf")
+                    SOURCE_PATH + "/output/", f"{note_id}_{idx}.pdf")
+                if os.path.isfile(file_input_path):
+                    os.unlink(file_input_path)
+                    print(f"{file_input_path} deleted")
                 if os.path.isfile(file_output_path):
                     os.unlink(file_output_path)
                     print(f"{file_output_path} deleted")
-    except Exception as e:
-        print(e)
+            else:
+                if description:
+                    file_output_path = os.path.join(
+                        SOURCE_PATH + "/output/", f"{note_id}_description.pdf")
+                    if os.path.isfile(file_output_path):
+                        os.unlink(file_output_path)
+                        print(f"{file_output_path} deleted")
+        except Exception as e:
+            print(e)
     print("Success!")
 
     return f"{SOURCE_PATH}/output/{note_id}.pdf"

@@ -85,17 +85,11 @@ async def add_note(req: Request,
     if not data[1]:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    # # Test user
-    # from uuid import UUID
-    # user = UUID("6a423db5-8a34-4153-9795-c6f058020445", version=4)
-
-    # need verify timestamp logic
-
-    # create pdf
     try:
         contents = []
-        for file in files:
-            contents.append(await file.read())
+        if files:
+            for file in files:
+                contents.append(await file.read())
         pdf_res = generate_pdf(
             note_id=str(note_id), description=description, files=files, contents=contents)
         # upload pdf
