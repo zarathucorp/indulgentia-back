@@ -38,7 +38,7 @@ def read_bucket(bucket_id: UUID4):
 def read_bucket_list(project_id: UUID4):
     try:
         data, count = supabase.table("bucket").select(
-            '*').eq("is_deleted", False).eq("project_id", project_id).execute()
+            '*').eq("is_deleted", False).eq("project_id", project_id).order("created_at", desc=True).execute()
         print('='*120)
         print(data, count)
         return data[1]

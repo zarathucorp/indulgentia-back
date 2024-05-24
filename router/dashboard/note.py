@@ -23,6 +23,10 @@ router = APIRouter(
 
 @router.get("/list/{bucket_id}", tags=["note"])
 async def get_note_list(req: Request, bucket_id: str):
+    try:
+        test_id = uuid.UUID(bucket_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -41,6 +45,10 @@ async def get_note_list(req: Request, bucket_id: str):
 
 @router.get("/{note_id}", tags=["note"])
 async def get_note(req: Request, note_id: str):
+    try:
+        test_id = uuid.UUID(note_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -142,6 +150,10 @@ async def change_note(req: Request, note: schemas.NoteUpdate):
 
 @router.delete("/{note_id}", tags=["note"])
 async def drop_note(req: Request, note_id: str):
+    try:
+        test_id = uuid.UUID(note_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -189,6 +201,10 @@ async def get_note_file(req: Request, note_id: str):
 
 @router.get("/{note_id}/breadcrumb")
 async def get_breadcrumb(req: Request, note_id: str):
+    try:
+        test_id = uuid.UUID(note_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
