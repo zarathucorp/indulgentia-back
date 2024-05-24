@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 from pydantic import UUID4
-from typing import Optional, List
+from typing import Optional, List, Union
 import os
 import uuid
 
@@ -65,8 +65,8 @@ async def add_note(req: Request,
                    title: str = Form(...),
                    file_name: str = Form(...),
                    is_github: bool = Form(...),
-                   files: List[UploadFile] = File(None),
-                   description: str = Form(None)
+                   files: List[Union[UploadFile, None]] = File(None),
+                   description: Optional[str] = Form(None)
                    ):
     user: UUID4 = verify_user(req)
     note_id = uuid.uuid4()
@@ -86,20 +86,21 @@ async def add_note(req: Request,
         raise HTTPException(status_code=403, detail="Forbidden")
 
     try:
+        # Assume timestamp exist
+        timestamp = "WIP"
+
         contents = []
         if files:
             for file in files:
                 contents.append(await file.read())
-        pdf_res = generate_pdf(
-            note_id=str(note_id), description=description, files=files, contents=contents)
+        pdf_res = generate_pdf(title=title, username=str(user),  # user_id -> username 수정 필요
+                               note_id=str(note_id), timestamp=timestamp, description=description, files=files, contents=contents)
         # upload pdf
         with open(pdf_res, "rb") as f:
             pdf_data = f.read()
         upload_blob(pdf_data, str(note_id) + ".pdf")
     except Exception as e:
         print(e)
-        res_e = delete_note(str(note_id))
-        print(res_e)
         raise HTTPException(status_code=500, detail=str(e))
 
     # delete result pdf
