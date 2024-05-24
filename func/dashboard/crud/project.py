@@ -42,7 +42,7 @@ def read_project(project_id: UUID4):
 def read_project_list(team_id: UUID4):
     try:
         data, count = supabase.table("project").select(
-            '*').eq("is_deleted", False).eq("team_id", team_id).execute()
+            '*').eq("is_deleted", False).eq("team_id", team_id).order("created_at", desc=True).execute()
         print('='*120)
         print(data, count)
         return data[1]
