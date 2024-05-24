@@ -86,17 +86,66 @@ def convert_doc_to_pdf(source_path: str, file_name: str, extension: str):
     return f"{file_name}.pdf"
 
 
-def generate_pdf(note_id: str, description: str, files=List[UploadFile], contents=List[bytes]):
+def create_intro_page(title: str, author: str, timestamp: str, description: str | None, SOURCE_PATH: str, note_id: str):
+    from datetime import datetime
+
+    pdf = FPDF()
+
+    date = datetime.now().strftime("%Y-%m-%d")
+    pdf.add_page()
+
+    pdf.add_font("Pretendard", style="",
+                 fname=f"{SOURCE_PATH}/Pretendard-Regular.ttf")
+    pdf.set_font("Pretendard", size=24)
+    pdf.cell(200, 10, txt=title, ln=True, align='C')
+    pdf.set_font("Pretendard", size=12)
+    pdf.cell(200, 10, txt=f"Author: {author}", ln=True, align='L')
+    pdf.cell(200, 10, txt=f"Date: {date}", ln=True, align='L')
+    pdf.cell(200, 10, txt=f"Timestamp: {timestamp}", ln=True, align='L')
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+
+    pdf.set_font("Pretendard", size=12)
+    if description:
+        # # Limit description to 2000 characters
+        # description = description.encode(
+        #     "utf-8")[:2000].decode("utf-8", "ignore") if description else None
+        description = description[:1000]
+        print(description)
+        pdf.set_font("Pretendard", size=12)
+        pdf.multi_cell(0, 10, description)
+
+    res = pdf.output()
+    with open(f"{SOURCE_PATH}/output/{note_id}_intro.pdf", 'wb') as f:
+        f.write(res)
+        print(f"{SOURCE_PATH}/output/{note_id}_intro.pdf saved")
+
+
+def generate_pdf(title: str, username: str, note_id: str, timestamp: str, description: str | None, files: List[Union[UploadFile, None]], contents: List[Union[bytes, None]]):
     SOURCE_PATH = "func/dashboard/pdf_generator"
     DOC_EXTENSIONS = ["doc", "docx", "hwp",
                       "hwpx", "ppt", "pptx", "xls", "xlsx"]
     IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "bmp"]
     AVAILABLE_EXTENSIONS = DOC_EXTENSIONS + IMAGE_EXTENSIONS + ["pdf"]
     A4_SIZE = (595, 842)
+
+    # Intro PDF
+    print(description)
+    print(files)
+    create_intro_page(title, username, timestamp,
+                      description, SOURCE_PATH, note_id)
+
     if files:
         if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
             raise HTTPException(
                 status_code=422, detail="Unprocessable file extension")
+        for idx, file in enumerate(files):
+            extension = file.filename.split(".")[-1]
+            filename = f"{note_id}_{idx}"
+
+        if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
+            raise HTTPException(
+                status_code=422, detail="Unprocessable file extension")
+
         for idx, file in enumerate(files):
             extension = file.filename.split(".")[-1]
             filename = f"{note_id}_{idx}"
@@ -109,7 +158,8 @@ def generate_pdf(note_id: str, description: str, files=List[UploadFile], content
                 res = convert_doc_to_pdf(SOURCE_PATH, filename, extension)
                 print(f"{SOURCE_PATH}/output/{res} saved")
             elif extension in IMAGE_EXTENSIONS:
-                image = Image.open(f"{SOURCE_PATH}/input/{filename}.{extension}")
+                image = Image.open(
+                    f"{SOURCE_PATH}/input/{filename}.{extension}")
                 image.thumbnail(A4_SIZE)
                 if image.mode == "RGBA":
                     image.load()
@@ -126,35 +176,21 @@ def generate_pdf(note_id: str, description: str, files=List[UploadFile], content
                     f.write(contents[idx])
                     print(f"{SOURCE_PATH}/output/{filename}.pdf saved")
 
-    # description to pdf
-    if description:
-        pdf = FPDF()
-        pdf.add_font("Pretendard", style="",
-                     fname=f"{SOURCE_PATH}/Pretendard-Regular.ttf")
-        pdf.set_font("Pretendard", size=12)
-        pdf.add_page()
-        # # Limit description to 2000 characters
-        # description = description.encode(
-        #     "utf-8")[:2000].decode("utf-8", "ignore") if description else None
-        description = description[:1000]
-        pdf.multi_cell(0, 10, description)
-        res = pdf.output()
-        with open(f"{SOURCE_PATH}/output/{note_id}_description.pdf", 'wb') as f:
-            f.write(res)
-            print(f"{SOURCE_PATH}/output/{note_id}_description.pdf saved")
-
     # merge pdfs
-    pdfs = []
+    pdfs = [f"{SOURCE_PATH}/output/{note_id}_intro.pdf"]
     if files:
-        pdfs = [f"{SOURCE_PATH}/output/{note_id}_{idx}.pdf" for idx in range(len(files))]
-    pdfs.append(
-        f"{SOURCE_PATH}/output/{note_id}_description.pdf") if description else None
+        pdfs = pdfs + \
+            [f"{SOURCE_PATH}/output/{note_id}_{idx}.pdf" for idx in range(
+                len(files))]
+    print(pdfs)
     pdfmerge(pdfs, f"{SOURCE_PATH}/output/{note_id}.pdf")
     print(f"{SOURCE_PATH}/output/{note_id}.pdf saved")
 
     # delete files
-    if files:
-        try:
+    try:
+        os.unlink(f"{SOURCE_PATH}/output/{note_id}_intro.pdf")
+        print(f"{SOURCE_PATH}/output/{note_id}_intro.pdf deleted")
+        if files:
             for idx, file in enumerate(files):
                 file_input_path = os.path.join(
                     SOURCE_PATH + "/input/", f"{note_id}_{idx}.{file.filename.split('.')[-1]}")
@@ -166,15 +202,8 @@ def generate_pdf(note_id: str, description: str, files=List[UploadFile], content
                 if os.path.isfile(file_output_path):
                     os.unlink(file_output_path)
                     print(f"{file_output_path} deleted")
-            else:
-                if description:
-                    file_output_path = os.path.join(
-                        SOURCE_PATH + "/output/", f"{note_id}_description.pdf")
-                    if os.path.isfile(file_output_path):
-                        os.unlink(file_output_path)
-                        print(f"{file_output_path} deleted")
-        except Exception as e:
-            print(e)
+    except Exception as e:
+        print(e)
     print("Success!")
 
     return f"{SOURCE_PATH}/output/{note_id}.pdf"
