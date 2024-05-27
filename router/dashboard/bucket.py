@@ -29,7 +29,7 @@ async def get_bucket_list(req: Request, project_id: str):
         "verify_project", {"user_id": str(user), "project_id": project_id}).execute()
     if not data[1]:
         raise HTTPException(status_code=403, detail="Forbidden")
-    res = read_bucket_list(project_id)
+    res = read_bucket_list(uuid.UUID(project_id))
     return JSONResponse(content={
         "status": "succeed",
         "data": res
@@ -51,7 +51,7 @@ async def get_bucket(req: Request, bucket_id: str):
         "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     if not data[1]:
         raise HTTPException(status_code=403, detail="Forbidden")
-    res = read_bucket(bucket_id)
+    res = read_bucket(uuid.UUID(bucket_id))
     return JSONResponse(content={
         "status": "succeed",
         "data": res
@@ -110,7 +110,7 @@ async def drop_bucket(req: Request, bucket_id: str):
         raise HTTPException(status_code=400, detail="No data")
     # if not user == data[1][0]["manager_id"]:
         # raise HTTPException(status_code=403, detail="Forbidden")
-    res = flag_is_deleted_bucket(bucket_id)
+    res = flag_is_deleted_bucket(uuid.UUID(bucket_id))
     return JSONResponse(content={
         "status": "succeed",
         "data": res
@@ -123,7 +123,8 @@ async def drop_bucket(req: Request, bucket_id: str):
     user: UUID4 = verify_user(req)
     # if not user:
     #     raise HTTPException(status_code=401, detail="Unauthorized")
-    data, count = supabase.table("bucket").select("manager_id").eq("id", bucket_id).execute()
+    data, count = supabase.table("bucket").select(
+        "manager_id").eq("id", bucket_id).execute()
     if not data[1]:
         raise HTTPException(status_code=400, detail="No data")
     if not user == data[1][0]["manager_id"]:
@@ -152,4 +153,32 @@ async def get_breadcrumb(req: Request, bucket_id: str):
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1][0]
+    })
+
+
+@router.get("/{bucket_id}/github_repo")
+async def get_connected_github_repositories(req: Request, bucket_id: str):
+    # user: UUID4 = verify_user(req)
+    # if not user:
+    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    data = get_connected_gitrepo(uuid.UUID(bucket_id))
+    # data, count = supabase.rpc(
+    #     "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
+    # if not data[1]:
+    #     raise HTTPException(status_code=403, detail="Forbidden")
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data
+    })
+
+
+@router.post("/{bucket_id}/github_repo")
+async def connect_gitbub_repository(req: Request, bucket_id: str, newRepo: schemas.GitrepoCreate):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    data = create_connected_gitrepo(newRepo, user)
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data
     })

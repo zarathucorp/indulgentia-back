@@ -94,3 +94,30 @@ def delete_bucket(bucket_id: UUID4):
         print('='*120)
         print(e)
         raise HTTPException(status_code=400, detail=str(e))
+
+
+def get_connected_gitrepo(bucket_id: UUID4):
+    try:
+        data, count = supabase.table("gitrepo").select(
+            "*").eq("bucket_id", bucket_id).execute()
+        print('='*120)
+        print(data, count)
+        return data[1]
+    except Exception as e:
+        print('='*120)
+        print(e)
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+def create_connected_gitrepo(newRepo: schemas.GitrepoCreate, user: UUID4):
+    repo = newRepo.model_dump(mode="json")
+    try:
+        data, count = supabase.table("gitrepo").insert(
+            {**repo, "user_id": str(user)}).execute()
+        print('='*120)
+        print(data, count)
+        return data[1]
+    except Exception as e:
+        print('='*120)
+        print(e)
+        raise HTTPException(status_code=400, detail=str(e))

@@ -87,7 +87,6 @@ class Project(ProjectBase):
 
 class GitrepoBase(BaseModel):
     bucket_id: UUID4
-    user_id: UUID4
     repo_url: str
     git_username: str
     git_repository: str
@@ -99,9 +98,11 @@ class GitrepoCreate(GitrepoBase):
 
 class GitrepoUpdate(GitrepoBase):
     id: UUID4
+    user_id: UUID4
 
 
 class Gitrepo(GitrepoBase):
+    user_id: UUID4
     id: UUID4
     created_at: datetime
     updated_at: datetime | None
@@ -147,7 +148,7 @@ class NoteBase(BaseModel):
     user_id: UUID4
     bucket_id: UUID4
     title: str
-    timestamp_authentication: str = None  # need verification?
+    timestamp_authentication: str | None = None  # need verification?
     file_name: str
     is_github: bool
     github_type: Literal["Commit", "PR", "Issue"] | None = None
