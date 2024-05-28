@@ -209,3 +209,16 @@ class Order(OrderBase):
 
 class CreateSignature(BaseModel):
     file: str
+
+
+class TeamBase(BaseModel):
+    team_leader_id: UUID4
+    name: str
+
+
+class TeamCreate(TeamBase):
+    pass
+
+
+class TeamUpdate(TeamBase):
+    id: UUID4
