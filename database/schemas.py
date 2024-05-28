@@ -203,3 +203,7 @@ class Order(OrderBase):
         if self.id is None:
             result.pop("id")
         return result
+
+
+class CreateSignature(BaseModel):
+    file: str

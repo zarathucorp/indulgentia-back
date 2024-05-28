@@ -7,6 +7,7 @@ from database.supabase import supabase
 from func.auth.auth import verify_user
 from cloud.azure.blob_storage import *
 from env import DEFAULT_AZURE_CONTAINER_NAME
+from database.schemas import *
 
 router = APIRouter(
     prefix="/settings",
@@ -75,7 +76,7 @@ async def get_signature(req: Request):
 
 @router.post("/signature", tags=["settings"])
 # async def add_signature(req: Request, file: UploadFile = File(...)):
-async def add_signature(req: Request, file: str):
+async def add_signature(req: Request, signature: CreateSignature):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -86,6 +87,7 @@ async def add_signature(req: Request, file: str):
     from PIL import Image
     from io import BytesIO
 
+    file = signature.file
     base64_string = file.replace("data:image/png;base64,", "")
     image_data = base64.b64decode(base64_string)
     res = upload_blob(BytesIO(image_data).getvalue(), f"{user}.png")
