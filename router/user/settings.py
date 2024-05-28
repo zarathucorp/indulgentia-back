@@ -7,7 +7,7 @@ from database.supabase import supabase
 from func.auth.auth import verify_user
 from cloud.azure.blob_storage import *
 from env import DEFAULT_AZURE_CONTAINER_NAME
-from database.schemas import *
+from database import schemas
 
 router = APIRouter(
     prefix="/settings",
@@ -25,6 +25,7 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+# signature API
 @router.get("/signature", tags=["settings"])
 async def get_signature(req: Request):
     user: UUID4 = verify_user(req)
@@ -76,7 +77,7 @@ async def get_signature(req: Request):
 
 @router.post("/signature", tags=["settings"])
 # async def add_signature(req: Request, file: UploadFile = File(...)):
-async def add_signature(req: Request, signature: CreateSignature):
+async def add_signature(req: Request, signature: schemas.CreateSignature):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -136,3 +137,53 @@ async def drop_signature(req: Request):
         return JSONResponse(content={
             "status": "failed",
         })
+
+
+# user info API
+@router.get("/info", tags=["settings"])
+def get_user_info(req: Request):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    # # testing user
+    # user = "6a423db5-8a34-4153-9795-c6f058020445"
+    data, count = supabase.table("user_setting").select(
+        "id", "first_name", "last_name", "email").eq("id", user).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data")
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data[1][0]
+    })
+
+
+@router.patch("/info", tags=["settings"])
+async def update_user_info(req: Request, user_info: schemas.UserUpdate):
+    user: UUID4 = verify_user(req)
+    if not user_info:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    data, count = supabase.table("user_setting").update(
+        {"first_name": user_info.first_name, "last_name": user_info.last_name, "email": user_info.email}).eq("id", user).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data")
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data[1][0]
+    })
+
+# need to decide how to delete user info
+
+
+@router.delete("/info", tags=["settings"])
+async def drop_user_info(req: Request):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    data, count = supabase.table(
+        "user_setting").delete().eq("id", user).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data")
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data[1][0]
+    })

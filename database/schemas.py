@@ -16,19 +16,21 @@ from datetime import datetime, date
 
 
 class UserBase(BaseModel):
-    email: str
     team_id: UUID4 | None = None
-    signature_path: str | None = None
-    is_admin: bool = False
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str
 
 
+# Not using
 class UserCreate(UserBase):
-    password: str
+    pass
 
 
 class UserUpdate(UserBase):
-    id: UUID4
-    password: str
+    pass
+
+# Not using
 
 
 class User(UserBase):
