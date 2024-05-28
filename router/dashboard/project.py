@@ -47,7 +47,10 @@ async def get_project_list_by_current_user(req: Request):
     if not data[1]:
         # raise HTTPException(status_code=500, detail="Supabase Error")
         raise HTTPException(status_code=403, detail="Forbidden")
-    res = read_project_list(data[1][0].get("team_id"))
+    if not data[1][0].get("team_id"):
+        raise HTTPException(status_code=401, detail="No team found")
+    else:
+        res = read_project_list(data[1][0].get("team_id"))
     return JSONResponse(content={
         "status": "succeed",
         "data": res
