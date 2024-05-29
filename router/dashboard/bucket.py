@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import UUID4
+import uuid
 
 from database import schemas
 from func.dashboard.crud.bucket import *

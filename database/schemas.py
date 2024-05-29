@@ -16,25 +16,25 @@ from datetime import datetime, date
 
 
 class UserBase(BaseModel):
-    email: str
-    team_id: UUID4 | None = None
-    signature_path: str | None = None
-    is_admin: bool = False
+    first_name: str | None = None
+    last_name: str | None = None
 
 
+# Not using
 class UserCreate(UserBase):
-    password: str
+    pass
 
 
 class UserUpdate(UserBase):
-    id: UUID4
-    password: str
+    pass
+
+# Not using
 
 
 class User(UserBase):
     id: UUID4
-    created: datetime
-    last_signin: datetime
+    team_id: UUID4
+    email: str
 
     def to_dict(self):
         result = self.__dict__
@@ -207,3 +207,17 @@ class Order(OrderBase):
 
 class CreateSignature(BaseModel):
     file: str
+
+
+class TeamBase(BaseModel):
+    team_leader_id: UUID4
+    name: str
+    is_premium: bool = False
+
+
+class TeamCreate(TeamBase):
+    pass
+
+
+class TeamUpdate(TeamBase):
+    pass

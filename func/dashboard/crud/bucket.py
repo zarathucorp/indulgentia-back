@@ -52,7 +52,7 @@ def update_bucket(bucket: schemas.BucketUpdate):
     try:
         bucket = bucket.model_dump(mode="json")
         data, count = supabase.table("bucket").update(
-            bucket).eq("id", bucket["id"]).execute()
+            bucket).eq("is_deleted", False).eq("id", bucket["id"]).execute()
         print('='*120)
         print(data, count)
         if not data[1]:

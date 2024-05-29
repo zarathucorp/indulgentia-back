@@ -61,7 +61,7 @@ def update_project(project: schemas.ProjectUpdate):
                 status_code=400, detail="Start date should be earlier than end date")
 
         data, count = supabase.table("project").update(
-            {**project}).eq("id", project["id"]).execute()
+            {**project}).eq("is_deleted", False).eq("id", project["id"]).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
