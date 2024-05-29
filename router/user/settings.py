@@ -181,3 +181,48 @@ async def drop_user_info(req: Request):
         "status": "succeed",
         "data": data[1][0]
     })
+
+
+@router.get("/github/token", tags=["settings"])
+def get_github_token(req: Request):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    data, count = supabase.table("user_setting").select(
+        "github_token").eq("id", user).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data")
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data[1][0]
+    })
+
+
+@router.patch("/github/token", tags=["settings"])
+def change_github_token(req: Request, token: str):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    data, count = supabase.table("user_setting").update(
+        {"github_token": token}).eq("id", user).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data")
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data[1][0]
+    })
+
+
+@router.delete("/github/token", tags=["settings"])
+def drop_github_token(req: Request):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    data, count = supabase.table("user_setting").update(
+        {"github_token": None}).eq("id", user).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="No data")
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data[1][0]
+    })
