@@ -33,6 +33,19 @@ def get_team_user(team_id: UUID4):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+def get_user_id_by_email(email: str):
+    try:
+        data, count = supabase.table(
+            "user_setting").select("id").eq("email", email).execute()
+        print('='*120)
+        print(data, count)
+        return data[1][0].get('id', None)
+    except Exception as e:
+        print('='*120)
+        print(e)
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 def validate_user_in_team(user_id: UUID4, team_id: UUID4):
     try:
         data, count = supabase.table(
