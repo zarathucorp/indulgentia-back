@@ -174,11 +174,23 @@ async def get_connected_github_repositories(req: Request, bucket_id: str):
 
 
 @router.post("/{bucket_id}/github_repo")
-async def connect_gitbub_repository(req: Request, bucket_id: str, newRepo: schemas.GitrepoCreate):
+async def connect_github_repository(req: Request, bucket_id: str, newRepo: schemas.GitrepoCreate):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     data = create_connected_gitrepo(newRepo, user)
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data
+    })
+
+
+@router.delete("/{bucket_id}/github_repo/{repo_id}")
+async def disconnect_github_repository(req: Request, bucket_id: str, repo_id: str):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    data = delete_connected_gitrepo(uuid.UUID(repo_id))
     return JSONResponse(content={
         "status": "succeed",
         "data": data

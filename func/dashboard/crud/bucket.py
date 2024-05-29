@@ -121,3 +121,16 @@ def create_connected_gitrepo(newRepo: schemas.GitrepoCreate, user: UUID4):
         print('='*120)
         print(e)
         raise HTTPException(status_code=400, detail=str(e))
+
+
+def delete_connected_gitrepo(repo_id: UUID4):
+    try:
+        data, count = supabase.table("gitrepo").delete().eq(
+            "id", repo_id).execute()
+        print('='*120)
+        print(data, count)
+        return data[1]
+    except Exception as e:
+        print('='*120)
+        print(e)
+        raise HTTPException(status_code=400, detail=str(e))
