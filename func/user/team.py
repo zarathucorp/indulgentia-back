@@ -39,6 +39,8 @@ def get_user_id_by_email(email: str):
             "user_setting").select("id").eq("email", email).execute()
         print('='*120)
         print(data, count)
+        if not data[1]:
+            raise HTTPException(status_code=400, detail="Email not found")
         return data[1][0].get('id', None)
     except Exception as e:
         print('='*120)
@@ -54,7 +56,7 @@ def validate_user_in_team(user_id: UUID4, team_id: UUID4):
         print(data, count)
         if not data[1]:
             return False
-        if data[1][0].get('team_id', None) != team_id:
+        if data[1][0].get('team_id', None) != str(team_id):
             return False
         return True
     except Exception as e:
@@ -83,12 +85,12 @@ def validate_user_free(user_id: UUID4):
 def validate_user_is_leader(user_id: UUID4, team_id: UUID4):
     try:
         data, count = supabase.table(
-            "team").select("team_leader_id").eq("id", team_id).execute()
+            "team").select("team_leader_id").eq("is_deleted", False).eq("id", team_id).execute()
         print('='*120)
         print(data, count)
         if not data[1]:
             return False
-        if data[1][0].get('team_leader_id', None) != user_id:
+        if data[1][0].get('team_leader_id', None) != str(user_id):
             return False
         return True
     except Exception as e:

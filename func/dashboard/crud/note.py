@@ -53,7 +53,7 @@ def update_note(note: schemas.NoteUpdate):
         note = note.model_dump(mode="json")
 
         data, count = supabase.table("note").update(
-            note).eq("id", note["id"]).execute()
+            note).eq("is_deleted", False).eq("id", note["id"]).execute()
         print('='*120)
         print(data, count)
         if not data[1]:

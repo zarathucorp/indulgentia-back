@@ -16,10 +16,8 @@ from datetime import datetime, date
 
 
 class UserBase(BaseModel):
-    team_id: UUID4 | None = None
     first_name: str | None = None
     last_name: str | None = None
-    email: str
 
 
 # Not using
@@ -35,8 +33,8 @@ class UserUpdate(UserBase):
 
 class User(UserBase):
     id: UUID4
-    created: datetime
-    last_signin: datetime
+    team_id: UUID4
+    email: str
 
     def to_dict(self):
         result = self.__dict__
@@ -214,6 +212,7 @@ class CreateSignature(BaseModel):
 class TeamBase(BaseModel):
     team_leader_id: UUID4
     name: str
+    is_premium: bool = False
 
 
 class TeamCreate(TeamBase):
@@ -221,4 +220,4 @@ class TeamCreate(TeamBase):
 
 
 class TeamUpdate(TeamBase):
-    id: UUID4
+    pass

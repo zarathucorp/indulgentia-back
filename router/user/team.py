@@ -1,10 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import UUID4
+from uuid import UUID
+import re
+
 from func.auth.auth import verify_user
 from func.user.team import *
 from database import schemas
 from database.supabase import supabase
+
+
 router = APIRouter(
     prefix="/team",
     responses={404: {"description": "Not found"}},
@@ -46,35 +51,34 @@ def make_team(req: Request, team: schemas.TeamCreate):
         raise HTTPException(status_code=401, detail="Unauthorized")
     if not validate_user_free(user):
         raise HTTPException(status_code=403, detail="Already in team")
-    data1, count = supabase.table("team").insert(
+    team_data, count = supabase.table("team").insert(
         team.model_dump(mode="json")).execute()
-    if not data1[1]:
+    if not team_data[1]:
         raise HTTPException(status_code=400, detail="Failed to create team")
-    team_id = data1[1][0].get("id")
-    data2, count = supabase.table("user_setting").update(
+    team_id = team_data[1][0].get("id")
+    user_data, count = supabase.table("user_setting").update(
         {"team_id": team_id}).eq("id", user).execute()
-    if not data2[1]:
+    if not user_data[1]:
         raise HTTPException(
             status_code=400, detail="Failed to update user setting")
-    res = data1[1][0]
     return JSONResponse(content={
         "status": "succeed",
-        "data": res
+        "data": {"team": team_data[1][0], "user": user_data[1][0]}
     })
 
 
 @router.put("/{team_id}", tags=["team"])
 def update_team(req: Request, team_id: str, team: schemas.TeamUpdate):
     try:
-        test_id = UUID4(team_id)
+        test_id = UUID(team_id)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    if validate_user_in_team(user, UUID4(team_id)):
-        raise HTTPException(status_code=403, detail="Already in team")
-    data, count = supabase.table("team").select(
+    if not validate_user_in_team(user, UUID(team_id)):
+        raise HTTPException(status_code=403, detail="Not in team")
+    data, count = supabase.table("team").eq("is_deleted", False).update(
         team.model_dump(mode="json")).eq("id", team_id).execute()
     if not data[1]:
         raise HTTPException(status_code=400, detail="Failed to update team")
@@ -88,16 +92,16 @@ def update_team(req: Request, team_id: str, team: schemas.TeamUpdate):
 @router.patch("/{team_id}/leader", tags=["team"])
 def change_team_leader(req: Request, team_id: str, next_leader_id: str):
     try:
-        test_id = UUID4(team_id)
+        test_id = UUID(team_id)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    if not validate_user_is_leader(user, UUID4(team_id)):
+    if not validate_user_is_leader(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not a team leader")
-    data, count = supabase.table("team").update(
-        {"team_leader_id": next_leader_id}).eq("id", team_id).execute()
+    data, count = supabase.table("team").eq("is_deleted", False).update(
+        {"team_leader_id": next_leader_id}).eq("is_deleted", False).eq("id", team_id).execute()
     if not data[1]:
         raise HTTPException(
             status_code=400, detail="Failed to change team leader")
@@ -111,8 +115,8 @@ def change_team_leader(req: Request, team_id: str, next_leader_id: str):
 @router.patch("/{team_id}/accept", tags=["team"])
 def accept_team_invite(req: Request, team_id: str, invite_id: str):
     try:
-        test_id = UUID4(team_id)
-        test_id = UUID4(invite_id)
+        test_id = UUID(team_id)
+        test_id = UUID(invite_id)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
@@ -121,33 +125,34 @@ def accept_team_invite(req: Request, team_id: str, invite_id: str):
     if not validate_user_free(user):
         raise HTTPException(status_code=403, detail="Already in team")
 
-    is_invite_accepted = validate_invite_accepted(UUID4(invite_id))
+    is_invite_accepted = validate_invite_accepted(UUID(invite_id))
     if is_invite_accepted == False:
         raise HTTPException(status_code=400, detail="Invite already rejected")
     elif is_invite_accepted == True:
         raise HTTPException(status_code=400, detail="Invite already accepted")
     else:  # is_invite_accepted == None
-        data1, count = supabase.table("team_invite").update(
+        team_invite_data, count = supabase.table("team_invite").update(
             {"is_accepted": True}).eq("id", invite_id).execute()
-        if not data1[1]:
+        if not team_invite_data[1]:
             raise HTTPException(
                 status_code=400, detail="Failed to accept team invite")
-        data2, count = supabase.table("user_setting").update(
+        # change to trigger in supabase
+        user_data, count = supabase.table("user_setting").update(
             {"team_id": team_id}).eq("id", user).execute()
-        if not data2[1]:
+        if not user_data[1]:
             raise HTTPException(
                 status_code=400, detail="Failed to update user setting")
         return JSONResponse(content={
             "status": "succeed",
-            "data": [data1[1][0], data2[1][0]]
+            "data": {"team_invite": team_invite_data[1][0], "user": user_data[1][0]}
         })
 
 
 @router.patch("/{team_id}/reject", tags=["team"])
 def reject_team_invite(req: Request, team_id: str, invite_id: str):
     try:
-        test_id = UUID4(team_id)
-        test_id = UUID4(invite_id)
+        test_id = UUID(team_id)
+        test_id = UUID(invite_id)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
@@ -156,7 +161,7 @@ def reject_team_invite(req: Request, team_id: str, invite_id: str):
     if not validate_user_free(user):
         raise HTTPException(status_code=403, detail="Already in team")
 
-    is_invite_accepted = validate_invite_accepted(UUID4(invite_id))
+    is_invite_accepted = validate_invite_accepted(UUID(invite_id))
     if is_invite_accepted == False:
         raise HTTPException(status_code=400, detail="Invite already rejected")
     elif is_invite_accepted == True:
@@ -177,13 +182,13 @@ def reject_team_invite(req: Request, team_id: str, invite_id: str):
 @router.delete("/{team_id}/exit", tags=["team"])
 def exit_team(req: Request, team_id: str):
     try:
-        test_id = UUID4(team_id)
+        test_id = UUID(team_id)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    if not validate_user_in_team(user, UUID4(team_id)):
+    if not validate_user_in_team(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not in team")
     data, count = supabase.table("user_setting").update(
         {"team_id": None}).eq("id", user).execute()
@@ -199,48 +204,50 @@ def exit_team(req: Request, team_id: str):
 @router.delete("/{team_id}", tags=["team"])
 def drop_team(req: Request, team_id: str):
     try:
-        test_id = UUID4(team_id)
+        test_id = UUID(team_id)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    if not validate_user_is_leader(user, UUID4(team_id)):
+    if not validate_user_is_leader(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not a team leader")
-    data1, count = supabase.table("team").update(
-        "is_deleted", True).eq("id", team_id).execute()
-    if not data1[1]:
+    team_data, count = supabase.table("team").update(
+        {"is_deleted": True}).eq("id", team_id).execute()
+    if not team_data[1]:
         raise HTTPException(status_code=400, detail="Failed to delete team")
-    data2, count = supabase.table("user_setting").update(
+    user_data, count = supabase.table("user_setting").update(
         {"team_id": None}).eq("team_id", team_id).execute()
-    if not data2[1]:
+    if not user_data[1]:
         raise HTTPException(
             status_code=400, detail="Failed to update user setting")
     return JSONResponse(content={
         "status": "succeed",
-        "data": [data1[1][0], data2[1][0]]
+        "data": {"team": team_data[1][0], "user": user_data[1][0]}
     })
 
 
 @router.post("/invite", tags=["team"])
 def send_team_invite_by_email(req: Request, user_email: str):
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", user_email):
+        raise HTTPException(status_code=422, detail="Invalid email format")
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     team_id = get_user_team(user)
-    if not validate_user_is_leader(user, UUID4(team_id)):
+    if not validate_user_is_leader(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not a team leader")
     invited_user_id = get_user_id_by_email(user_email)
-    data1, count = supabase.table("team_invite").select(
+    check_team_invite_data, count = supabase.table("team_invite").select(
         "*").eq("invited_user_id", invited_user_id).eq("team_id", team_id).execute()
-    if data1[1]:
+    if check_team_invite_data[1]:
         raise HTTPException(status_code=400, detail="Invite already sent")
-    data2, count = supabase.table("team_invite").insert(
+    result_team_invite_data, count = supabase.table("team_invite").insert(
         {"invited_user_id": invited_user_id, "is_accepted": None, "team_id": team_id}).execute()
-    if not data2[1]:
+    if not result_team_invite_data[1]:
         raise HTTPException(
             status_code=400, detail="Failed to send team invite")
-    res = data2[1][0]
+    res = result_team_invite_data[1][0]
     return JSONResponse(content={
         "status": "succeed",
         "data": res
@@ -266,10 +273,10 @@ def get_team_invite_sent_list(req: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     team_id = get_user_team(user)
-    if not validate_user_is_leader(user, UUID4(team_id)):
+    if not validate_user_is_leader(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not a team leader")
     data, count = supabase.table("team_invite").select(
-        "*").eq("project_id", team_id).order("created_at").execute()
+        "*").eq("team_id", team_id).order("created_at").execute()
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1]
@@ -279,7 +286,7 @@ def get_team_invite_sent_list(req: Request):
 @router.get("/invite/{invite_id}", tags=["team"])
 def get_team_invite_single(req: Request, invite_id: str):
     try:
-        test_id = UUID4(invite_id)
+        test_id = UUID(invite_id)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)

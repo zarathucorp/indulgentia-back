@@ -81,8 +81,6 @@ async def add_signature(req: Request, signature: schemas.CreateSignature):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    # # testing user
-    # user = UUID("6a423db5-8a34-4153-9795-c6f058020445", version=4)
 
     import base64
     from PIL import Image
@@ -114,8 +112,6 @@ async def drop_signature(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    # # testing user
-    # user = UUID("6a423db5-8a34-4153-9795-c6f058020445", version=4)
 
     data, count = supabase.table("user_setting").select(
         "has_signature").eq("id", user).execute()
@@ -145,8 +141,6 @@ def get_user_info(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    # # testing user
-    # user = "6a423db5-8a34-4153-9795-c6f058020445"
     data, count = supabase.table("user_setting").select(
         "id", "first_name", "last_name", "email").eq("id", user).execute()
     if not data[1]:
@@ -160,10 +154,10 @@ def get_user_info(req: Request):
 @router.patch("/info", tags=["settings"])
 async def update_user_info(req: Request, user_info: schemas.UserUpdate):
     user: UUID4 = verify_user(req)
-    if not user_info:
+    if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     data, count = supabase.table("user_setting").update(
-        {"first_name": user_info.first_name, "last_name": user_info.last_name, "email": user_info.email}).eq("id", user).execute()
+        {"first_name": user_info.first_name, "last_name": user_info.last_name}).eq("id", user).execute()
     if not data[1]:
         raise HTTPException(status_code=400, detail="No data")
     return JSONResponse(content={
