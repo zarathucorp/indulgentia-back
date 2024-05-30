@@ -93,7 +93,7 @@ class GitrepoBase(BaseModel):
 
 
 class GitrepoCreate(GitrepoBase):
-    pass
+    is_deleted: bool = False
 
 
 class GitrepoUpdate(GitrepoBase):

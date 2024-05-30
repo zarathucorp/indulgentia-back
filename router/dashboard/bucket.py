@@ -190,7 +190,7 @@ async def disconnect_github_repository(req: Request, bucket_id: str, repo_id: st
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    data = delete_connected_gitrepo(uuid.UUID(repo_id))
+    data = flag_is_deleted_gitrepo(uuid.UUID(repo_id))
     return JSONResponse(content={
         "status": "succeed",
         "data": data
