@@ -210,7 +210,6 @@ class CreateSignature(BaseModel):
 
 
 class TeamBase(BaseModel):
-    team_leader_id: UUID4
     name: str
     is_premium: bool = False
 
