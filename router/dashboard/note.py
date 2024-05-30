@@ -10,6 +10,7 @@ from database import schemas
 from func.dashboard.crud.note import *
 from func.auth.auth import *
 from func.dashboard.pdf_generator.pdf_generator import generate_pdf
+from cloud.azure.confidential_lendger import write_ledger, read_ledger
 
 
 router = APIRouter(
@@ -215,4 +216,54 @@ async def get_breadcrumb(req: Request, note_id: str):
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1][0]
+    })
+
+
+@router.post("/{note_id}/timestamp")
+def create_note_timestamp(req: Request, note_id: str):
+    import time
+    try:
+        test_id = uuid.UUID(note_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
+    data, count = supabase.table("note").select(
+        "id", "file_hash").eq("id", note_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="Failed to get note")
+    file_hash = data[1][0].get("file_hash")
+    content = {
+        "id": note_id,
+        "hash": file_hash,
+    }
+    ledger_res = write_ledger(content)
+
+    # Test required
+    data, count = supabase.table("note").update(
+        "transaction_id", ledger_res["transactionId"]).eq("id", note_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="Failed to update note")
+    res = data[1][0]
+
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": res
+    })
+
+
+@router.get("/{note_id}/timestamp")
+def get_note_timestamp(req: Request, note_id: str):
+    try:
+        test_id = uuid.UUID(note_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
+    data, count = supabase.table("note").select(
+        "transaction_id").eq("id", note_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="Failed to get note")
+    transaction_id = data[1][0].get("transaction_id")
+    entry = read_ledger(transaction_id)
+
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": entry
     })
