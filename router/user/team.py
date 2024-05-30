@@ -190,6 +190,9 @@ def exit_team(req: Request, team_id: str):
         raise HTTPException(status_code=401, detail="Unauthorized")
     if not validate_user_in_team(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not in team")
+    if validate_user_is_leader(user, UUID(team_id)) and len(get_team_user(UUID(team_id))) > 1:
+        raise HTTPException(
+            status_code=403, detail="Team leader can't exit team with members")
     data, count = supabase.table("user_setting").update(
         {"team_id": None}).eq("id", user).execute()
     if not data[1]:
@@ -212,6 +215,9 @@ def drop_team(req: Request, team_id: str):
         raise HTTPException(status_code=401, detail="Unauthorized")
     if not validate_user_is_leader(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not a team leader")
+    if len(get_team_user(UUID(team_id))) > 1:
+        raise HTTPException(
+            status_code=403, detail="Team leader can't drop team with members")
     team_data, count = supabase.table("team").update(
         {"is_deleted": True}).eq("id", team_id).execute()
     if not team_data[1]:
