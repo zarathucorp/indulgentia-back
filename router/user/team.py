@@ -52,7 +52,7 @@ def make_team(req: Request, team: schemas.TeamCreate):
     if not validate_user_free(user):
         raise HTTPException(status_code=403, detail="Already in team")
     team_data, count = supabase.table("team").insert(
-        team.model_dump(mode="json")).execute()
+        {**team.model_dump(mode="json"), "team_leader_id": user}).execute()
     if not team_data[1]:
         raise HTTPException(status_code=400, detail="Failed to create team")
     team_id = team_data[1][0].get("id")
@@ -76,10 +76,10 @@ def update_team(req: Request, team_id: str, team: schemas.TeamUpdate):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    if not validate_user_in_team(user, UUID(team_id)):
-        raise HTTPException(status_code=403, detail="Not in team")
-    data, count = supabase.table("team").eq("is_deleted", False).update(
-        team.model_dump(mode="json")).eq("id", team_id).execute()
+    if not validate_user_is_leader(user, UUID(team_id)):
+        raise HTTPException(status_code=403, detail="Not a team leader")
+    data, count = supabase.table("team").update(
+        team.model_dump(mode="json")).eq("is_deleted", False).eq("id", team_id).execute()
     if not data[1]:
         raise HTTPException(status_code=400, detail="Failed to update team")
     res = data[1][0]
@@ -100,8 +100,8 @@ def change_team_leader(req: Request, team_id: str, next_leader_id: str):
         raise HTTPException(status_code=401, detail="Unauthorized")
     if not validate_user_is_leader(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not a team leader")
-    data, count = supabase.table("team").eq("is_deleted", False).update(
-        {"team_leader_id": next_leader_id}).eq("is_deleted", False).eq("id", team_id).execute()
+    data, count = supabase.table("team").update(
+        {"team_leader_id": next_leader_id}).eq("is_deleted", False).eq("is_deleted", False).eq("id", team_id).execute()
     if not data[1]:
         raise HTTPException(
             status_code=400, detail="Failed to change team leader")
@@ -158,8 +158,8 @@ def reject_team_invite(req: Request, team_id: str, invite_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    if not validate_user_free(user):
-        raise HTTPException(status_code=403, detail="Already in team")
+    # if not validate_user_free(user):
+    #     raise HTTPException(status_code=403, detail="Already in team")
 
     is_invite_accepted = validate_invite_accepted(UUID(invite_id))
     if is_invite_accepted == False:
@@ -189,7 +189,7 @@ def exit_team(req: Request, team_id: str):
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     if not validate_user_in_team(user, UUID(team_id)):
-        raise HTTPException(status_code=403, detail="Not in team")
+        raise HTTPException(status_code=403, detail="Not in this team")
     if validate_user_is_leader(user, UUID(team_id)) and len(get_team_user(UUID(team_id))) > 1:
         raise HTTPException(
             status_code=403, detail="Team leader can't exit team with members")
@@ -245,7 +245,8 @@ def send_team_invite_by_email(req: Request, user_email: str):
         raise HTTPException(status_code=403, detail="Not a team leader")
     invited_user_id = get_user_id_by_email(user_email)
     check_team_invite_data, count = supabase.table("team_invite").select(
-        "*").eq("invited_user_id", invited_user_id).eq("team_id", team_id).execute()
+        "*").neq("is_accepted", False).eq("invited_user_id", invited_user_id).eq("team_id", team_id).execute()
+    print(check_team_invite_data[1])
     if check_team_invite_data[1]:
         raise HTTPException(status_code=400, detail="Invite already sent")
     result_team_invite_data, count = supabase.table("team_invite").insert(
@@ -266,7 +267,7 @@ def get_team_invite_received_list(req: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     data, count = supabase.table("team_invite").select(
-        "*").eq("invited_user_id", user).order("created_at").execute()
+        "*").is_("is_accepted", "null").eq("invited_user_id", user).order("created_at").execute()
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1]
@@ -282,7 +283,7 @@ def get_team_invite_sent_list(req: Request):
     if not validate_user_is_leader(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not a team leader")
     data, count = supabase.table("team_invite").select(
-        "*").eq("team_id", team_id).order("created_at").execute()
+        "*").is_("is_accepted", "null").eq("team_id", team_id).order("created_at").execute()
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1]
