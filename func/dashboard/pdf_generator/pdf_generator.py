@@ -86,7 +86,7 @@ def convert_doc_to_pdf(source_path: str, file_name: str, extension: str):
     return f"{file_name}.pdf"
 
 
-def create_intro_page(title: str, author: str, timestamp: str, description: str | None, SOURCE_PATH: str, note_id: str):
+def create_intro_page(title: str, author: str, description: str | None, SOURCE_PATH: str, note_id: str):
     from datetime import datetime
 
     pdf = FPDF()
@@ -101,7 +101,6 @@ def create_intro_page(title: str, author: str, timestamp: str, description: str 
     pdf.set_font("Pretendard", size=12)
     pdf.cell(200, 10, txt=f"Author: {author}", ln=True, align='L')
     pdf.cell(200, 10, txt=f"Date: {date}", ln=True, align='L')
-    pdf.cell(200, 10, txt=f"Timestamp: {timestamp}", ln=True, align='L')
     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
 
     pdf.set_font("Pretendard", size=12)
@@ -120,7 +119,7 @@ def create_intro_page(title: str, author: str, timestamp: str, description: str 
         print(f"{SOURCE_PATH}/output/{note_id}_intro.pdf saved")
 
 
-def generate_pdf(title: str, username: str, note_id: str, timestamp: str, description: str | None, files: List[Union[UploadFile, None]], contents: List[Union[bytes, None]]):
+def generate_pdf(title: str, username: str, note_id: str, description: str | None, files: List[Union[UploadFile, None]], contents: List[Union[bytes, None]]):
     SOURCE_PATH = "func/dashboard/pdf_generator"
     DOC_EXTENSIONS = ["doc", "docx", "hwp",
                       "hwpx", "ppt", "pptx", "xls", "xlsx"]
@@ -131,8 +130,7 @@ def generate_pdf(title: str, username: str, note_id: str, timestamp: str, descri
     # Intro PDF
     print(description)
     print(files)
-    create_intro_page(title, username, timestamp,
-                      description, SOURCE_PATH, note_id)
+    create_intro_page(title, username, description, SOURCE_PATH, note_id)
 
     if files:
         if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
@@ -206,7 +204,7 @@ def generate_pdf(title: str, username: str, note_id: str, timestamp: str, descri
         print(e)
     print("Success!")
 
-    return f"{SOURCE_PATH}/output/{note_id}.pdf"
+    return f"{SOURCE_PATH}/output/{note_id}"
 
 # # testing
 # convert_doc_to_pdf("func/dashboard/pdf_generator", "3d4256d9-20e8-4acc-9c51-42c90b4456ab_0", "docx")
