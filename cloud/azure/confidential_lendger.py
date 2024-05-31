@@ -65,13 +65,17 @@ def read_ledger(transaction_id: str):
             raise Exception("Transaction is still pending")
         elif status.get("state") != "Committed":
             raise Exception("Unknown Error - Transaction is not committed")
-
+        time_spent = 0
         while True:
             entry = ledger_client.get_ledger_entry(
                 transaction_id=transaction_id)
             if entry.get("state") == "Ready":
                 return entry
             time.sleep(0.01)
+            time_spent += 0.01
+
+            if time_spent > 10:
+                raise Exception("Timeout")
 
     except Exception as e:
         print(e)

@@ -148,7 +148,7 @@ class NoteBase(BaseModel):
     user_id: UUID4
     bucket_id: UUID4
     title: str
-    timestamp_authentication: str | None = None  # need verification?
+    timestamp_transaction_id: str | None = None
     file_name: str
     is_github: bool
     github_type: Literal["Commit", "PR", "Issue"] | None = None

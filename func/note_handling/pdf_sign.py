@@ -10,7 +10,7 @@ signer = signers.SimpleSigner.load(
 )
 
 
-def sign_pdf(note_id: str):
+async def sign_pdf(note_id: str):
     '''
     제시된 note_id에 해당하는 pdf 파일 서명
 
@@ -37,4 +37,4 @@ def sign_pdf(note_id: str):
             ),
         )
         with open(f'{note_id}_signed.pdf', 'wb') as outf:
-            pdf_signer.sign_pdf(w, output=outf)
+            await pdf_signer.async_sign_pdf(w, output=outf)
