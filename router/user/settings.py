@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import JSONResponse, FileResponse
-from pydantic import UUID4
+from pydantic import UUID4, BaseModel
 from uuid import UUID
 
 from database.supabase import supabase
@@ -198,13 +198,17 @@ def get_github_token(req: Request):
     })
 
 
+class AddGithubToken(BaseModel):
+    token: str
+
+
 @router.patch("/github/token", tags=["settings"])
-def change_github_token(req: Request, token: str):
+def change_github_token(req: Request, body: AddGithubToken):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     data, count = supabase.table("user_setting").update(
-        {"github_token": token}).eq("id", user).execute()
+        {"github_token": body.token}).eq("id", user).execute()
     if not data[1]:
         raise HTTPException(status_code=400, detail="No data")
     return JSONResponse(content={
