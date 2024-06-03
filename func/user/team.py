@@ -12,6 +12,8 @@ def get_user_team(user_id: UUID4):
             "user_setting").select("team_id").eq("id", user_id).execute()
         print('='*120)
         print(data, count)
+        if not data[1]:
+            raise HTTPException(status_code=400, detail="User not found")
         return data[1][0].get('team_id', None)
     except Exception as e:
         print('='*120)
@@ -26,6 +28,8 @@ def get_team_user(team_id: UUID4):
 
         print('='*120)
         print(data, count)
+        if not data[1]:
+            raise HTTPException(status_code=400, detail="Team not found")
         return data[1]
     except Exception as e:
         print('='*120)
