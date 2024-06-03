@@ -69,7 +69,7 @@ async def get_note(req: Request, note_id: str):
 
 # create
 
-
+@router.post("", include_in_schema=False)
 @router.post("/", tags=["note"])
 # file: Optional[UploadFile] = File(None)
 async def add_note(req: Request,
@@ -195,7 +195,7 @@ async def drop_note(req: Request, note_id: str):
 """
 
 
-@router.get("/file/{note_id}")
+@router.get("/file/{note_id}", tags=["note"])
 async def get_note_file(req: Request, note_id: str):
     # Auth 먼저 해야함
     try:
@@ -205,7 +205,7 @@ async def get_note_file(req: Request, note_id: str):
         return JSONResponse(status_code=400, content={"status": "failed", "message": str(e)})
 
 
-@router.get("/{note_id}/breadcrumb")
+@router.get("/{note_id}/breadcrumb", tags=["note"])
 async def get_breadcrumb(req: Request, note_id: str):
     try:
         test_id = uuid.UUID(note_id)
@@ -224,7 +224,7 @@ async def get_breadcrumb(req: Request, note_id: str):
     })
 
 
-@router.post("/{note_id}/timestamp")
+@router.post("/{note_id}/timestamp", tags=["note"])
 def create_note_timestamp(req: Request, note_id: str):
     import time
     try:
@@ -255,7 +255,7 @@ def create_note_timestamp(req: Request, note_id: str):
     })
 
 
-@router.get("/{note_id}/timestamp")
+@router.get("/{note_id}/timestamp", tags=["note"])
 def get_note_timestamp(req: Request, note_id: str):
     try:
         test_id = uuid.UUID(note_id)

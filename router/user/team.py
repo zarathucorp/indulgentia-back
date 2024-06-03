@@ -31,6 +31,7 @@ def get_team_user_list(req: Request):
     })
 
 
+@router.get("", include_in_schema=False)
 @router.get("/", tags=["team"])
 def get_user_team_req(req: Request):
     user: UUID4 = verify_user(req)
@@ -49,6 +50,7 @@ def get_user_team_req(req: Request):
     })
 
 
+@router.post("", include_in_schema=False)
 @router.post("/", tags=["team"])
 def make_team(req: Request, team: schemas.TeamCreate):
     user: UUID4 = verify_user(req)

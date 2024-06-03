@@ -10,43 +10,42 @@ from database import schemas
 from database.supabase import supabase
 
 
-
 router = APIRouter(
     prefix="/auth",
     responses={404: {"description": "Not found"}},
 )
 
 
-@router.get("/join")
-def join(request: Request):
-    # NewUser = schemas.UserCreate(
-    #     email="foo@bar.com",
-    #     password="foobar",
-    # )
-    NewUser = schemas.UserCreate(
-        email="koolerjaebee@gmail.com",
-        password="1q2w3e$r",
-        team_id=None,
-        signature_path=None,
-        is_admin=False,
-    )
-    res = supabase.auth.sign_up({"email": NewUser.email, "password": NewUser.password})
-    print('='*120)
-    print(res)
+# @router.get("/join")
+# def join(request: Request):
+#     # NewUser = schemas.UserCreate(
+#     #     email="foo@bar.com",
+#     #     password="foobar",
+#     # )
+#     NewUser = schemas.UserCreate(
+#         email="koolerjaebee@gmail.com",
+#         password="1q2w3e$r",
+#         team_id=None,
+#         signature_path=None,
+#         is_admin=False,
+#     )
+#     res = supabase.auth.sign_up({"email": NewUser.email, "password": NewUser.password})
+#     print('='*120)
+#     print(res)
 
-    return res
-
-
-@router.get("/login")
-def login():
-    pass
+#     return res
 
 
-@router.get("/logout")
-def logout():
-    pass
+# @router.get("/login")
+# def login():
+#     pass
 
 
-@router.get("/drop")
-def drop():
-    pass
+# @router.get("/logout")
+# def logout():
+#     pass
+
+
+# @router.get("/drop")
+# def drop():
+#     pass
