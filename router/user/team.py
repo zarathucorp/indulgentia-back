@@ -23,6 +23,12 @@ def get_team_user_list(req: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     user_team_id = get_user_team(user)
+    if not user_team_id:
+        raise HTTPException(status_code=400, detail="User not in team")
+    try:
+        UUID(user_team_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid team id")
     res = get_team_user(user_team_id)
     # need verify timestamp logic
 
@@ -39,6 +45,12 @@ def get_user_team_req(req: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     user_team_id = get_user_team(user)
+    if not user_team_id:
+        raise HTTPException(status_code=400, detail="User not in team")
+    try:
+        UUID(user_team_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid team id")
     data, count = supabase.table("team").select(
         "*").eq("is_deleted", False).eq("id", user_team_id).execute()
     if not data[1]:
