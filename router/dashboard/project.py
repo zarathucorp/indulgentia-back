@@ -81,7 +81,7 @@ async def get_project(req: Request, project_id: str):
 
 # create
 
-
+@router.post("", include_in_schema=False)
 @router.post("/", tags=["project"])
 async def add_project(req: Request, project: schemas.ProjectCreate):
     user: UUID4 = verify_user(req)

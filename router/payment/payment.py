@@ -27,7 +27,7 @@ class ConfirmPaymentRequest(BaseModel):
     amount: int
 
 
-@router.post("/confirm-payment/")
+@router.post("/confirm-payment/", tags=["payment"])
 async def confirm_payment(request: ConfirmPaymentRequest):
     # if TOSS_PAYMENT_SECRET_KEY is None:
     #     return {"error": "TOSS_PAYMENT_SECRET_KEY is not set"}

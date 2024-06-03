@@ -61,7 +61,7 @@ async def get_bucket(req: Request, bucket_id: str):
 
 # create
 
-
+@router.post("", include_in_schema=False)
 @router.post("/", tags=["bucket"])
 async def add_bucket(req: Request, bucket: schemas.BucketCreate):
     user: UUID4 = verify_user(req)
@@ -138,7 +138,7 @@ async def drop_bucket(req: Request, bucket_id: str):
 """
 
 
-@router.get("/{bucket_id}/breadcrumb")
+@router.get("/{bucket_id}/breadcrumb", tags=["bucket"])
 async def get_breadcrumb(req: Request, bucket_id: str):
     try:
         test_id = uuid.UUID(bucket_id)
@@ -157,7 +157,7 @@ async def get_breadcrumb(req: Request, bucket_id: str):
     })
 
 
-@router.get("/{bucket_id}/github_repo")
+@router.get("/{bucket_id}/github_repo", tags=["bucket"])
 async def get_connected_github_repositories(req: Request, bucket_id: str):
     # user: UUID4 = verify_user(req)
     # if not user:
@@ -173,7 +173,7 @@ async def get_connected_github_repositories(req: Request, bucket_id: str):
     })
 
 
-@router.post("/{bucket_id}/github_repo")
+@router.post("/{bucket_id}/github_repo", tags=["bucket"])
 async def connect_github_repository(req: Request, bucket_id: str, newRepo: schemas.GitrepoCreate):
     user: UUID4 = verify_user(req)
     if not user:
@@ -185,7 +185,7 @@ async def connect_github_repository(req: Request, bucket_id: str, newRepo: schem
     })
 
 
-@router.delete("/{bucket_id}/github_repo/{repo_id}")
+@router.delete("/{bucket_id}/github_repo/{repo_id}", tags=["bucket"])
 async def disconnect_github_repository(req: Request, bucket_id: str, repo_id: str):
     user: UUID4 = verify_user(req)
     if not user:
