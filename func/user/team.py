@@ -22,7 +22,7 @@ def get_user_team(user_id: UUID4):
 def get_team_user(team_id: UUID4):
     try:
         data, count = supabase.table(
-            "user_setting").select("id").eq("team_id", team_id).execute()
+            "user_setting").select("id", "email", "first_name", "last_name").eq("team_id", team_id).execute()
 
         print('='*120)
         print(data, count)
