@@ -37,10 +37,15 @@ def get_user_team_req(req: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
     user_team_id = get_user_team(user)
-
+    data, count = supabase.table("team").select(
+        "*").eq("is_deleted", False).eq("id", user_team_id).execute()
+    if not data[1]:
+        raise HTTPException(status_code=400, detail="Failed to get team")
+    res = data[1][0]
+    print(res)
     return JSONResponse(content={
         "status": "succeed",
-        "data": user_team_id
+        "data": res
     })
 
 
