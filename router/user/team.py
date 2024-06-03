@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from pydantic import UUID4
 from uuid import UUID
 import re
+from pydantic import BaseModel
 
 from func.auth.auth import verify_user
 from func.user.team import *
@@ -96,8 +97,12 @@ def update_team(req: Request, team_id: str, team: schemas.TeamUpdate):
     })
 
 
+class ChangeTeamLeaderRequest(BaseModel):
+    next_leader_id: str
+
+
 @router.patch("/{team_id}/leader", tags=["team"])
-def change_team_leader(req: Request, team_id: str, next_leader_id: str):
+def change_team_leader(req: Request, team_id: str, team: ChangeTeamLeaderRequest):
     try:
         test_id = UUID(team_id)
     except ValueError:
@@ -108,7 +113,7 @@ def change_team_leader(req: Request, team_id: str, next_leader_id: str):
     if not validate_user_is_leader(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not a team leader")
     data, count = supabase.table("team").update(
-        {"team_leader_id": next_leader_id}).eq("is_deleted", False).eq("is_deleted", False).eq("id", team_id).execute()
+        {"team_leader_id": team.next_leader_id}).eq("is_deleted", False).eq("is_deleted", False).eq("id", team_id).execute()
     if not data[1]:
         raise HTTPException(
             status_code=400, detail="Failed to change team leader")
@@ -119,11 +124,15 @@ def change_team_leader(req: Request, team_id: str, next_leader_id: str):
     })
 
 
+class TeamInviteRequest(BaseModel):
+    invite_id: str
+
+
 @router.patch("/{team_id}/accept", tags=["team"])
-def accept_team_invite(req: Request, team_id: str, invite_id: str):
+def accept_team_invite(req: Request, team_id: str, invite: TeamInviteRequest):
     try:
         test_id = UUID(team_id)
-        test_id = UUID(invite_id)
+        test_id = UUID(invite.invite_id)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
@@ -132,14 +141,14 @@ def accept_team_invite(req: Request, team_id: str, invite_id: str):
     if not validate_user_free(user):
         raise HTTPException(status_code=403, detail="Already in team")
 
-    is_invite_accepted = validate_invite_accepted(UUID(invite_id))
+    is_invite_accepted = validate_invite_accepted(UUID(invite.invite_id))
     if is_invite_accepted == False:
         raise HTTPException(status_code=400, detail="Invite already rejected")
     elif is_invite_accepted == True:
         raise HTTPException(status_code=400, detail="Invite already accepted")
     else:  # is_invite_accepted == None
         team_invite_data, count = supabase.table("team_invite").update(
-            {"is_accepted": True}).eq("id", invite_id).execute()
+            {"is_accepted": True}).eq("id", invite.invite_id).execute()
         if not team_invite_data[1]:
             raise HTTPException(
                 status_code=400, detail="Failed to accept team invite")
@@ -156,10 +165,10 @@ def accept_team_invite(req: Request, team_id: str, invite_id: str):
 
 
 @router.patch("/{team_id}/reject", tags=["team"])
-def reject_team_invite(req: Request, team_id: str, invite_id: str):
+def reject_team_invite(req: Request, team_id: str, invite: TeamInviteRequest):
     try:
         test_id = UUID(team_id)
-        test_id = UUID(invite_id)
+        test_id = UUID(invite.invite_id)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid UUID format")
     user: UUID4 = verify_user(req)
@@ -168,14 +177,14 @@ def reject_team_invite(req: Request, team_id: str, invite_id: str):
     # if not validate_user_free(user):
     #     raise HTTPException(status_code=403, detail="Already in team")
 
-    is_invite_accepted = validate_invite_accepted(UUID(invite_id))
+    is_invite_accepted = validate_invite_accepted(UUID(invite.invite_id))
     if is_invite_accepted == False:
         raise HTTPException(status_code=400, detail="Invite already rejected")
     elif is_invite_accepted == True:
         raise HTTPException(status_code=400, detail="Invite already accepted")
     else:  # is_invite_accepted == None
         data, count = supabase.table("team_invite").update(
-            {"is_accepted": False}).eq("id", invite_id).execute()
+            {"is_accepted": False}).eq("id", invite.invite_id).execute()
         if not data[1]:
             raise HTTPException(
                 status_code=400, detail="Failed to reject team invite")
@@ -240,9 +249,13 @@ def drop_team(req: Request, team_id: str):
     })
 
 
+class TeamInviteEmailRequest(BaseModel):
+    user_email: str
+
+
 @router.post("/invite", tags=["team"])
-def send_team_invite_by_email(req: Request, user_email: str):
-    if not re.match(r"[^@]+@[^@]+\.[^@]+", user_email):
+def send_team_invite_by_email(req: Request, invite: TeamInviteEmailRequest):
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", invite.user_email):
         raise HTTPException(status_code=422, detail="Invalid email format")
     user: UUID4 = verify_user(req)
     if not user:
@@ -250,7 +263,7 @@ def send_team_invite_by_email(req: Request, user_email: str):
     team_id = get_user_team(user)
     if not validate_user_is_leader(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not a team leader")
-    invited_user_id = get_user_id_by_email(user_email)
+    invited_user_id = get_user_id_by_email(invite.user_email)
     check_team_invite_data, count = supabase.table("team_invite").select(
         "*").neq("is_accepted", False).eq("invited_user_id", invited_user_id).eq("team_id", team_id).execute()
     print(check_team_invite_data[1])
