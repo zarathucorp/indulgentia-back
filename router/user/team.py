@@ -276,6 +276,8 @@ def send_team_invite_by_email(req: Request, invite: TeamInviteEmailRequest):
     if not validate_user_is_leader(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not a team leader")
     invited_user_id = get_user_id_by_email(invite.user_email)
+    if not validate_user_free(UUID(invited_user_id)):
+        raise HTTPException(status_code=403, detail="Already in team")
     check_team_invite_data, count = supabase.table("team_invite").select(
         "*").neq("is_accepted", False).eq("invited_user_id", invited_user_id).eq("team_id", team_id).execute()
     print(check_team_invite_data[1])
@@ -298,8 +300,9 @@ def get_team_invite_received_list(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    data, count = supabase.table("team_invite").select(
-        "*").is_("is_accepted", "null").eq("invited_user_id", user).order("created_at").execute()
+    data, count = supabase.rpc("get_team_invite_and_team_and_user_setting", {
+                               "user_id": str(user)}).execute()
+    print(data)
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1]
