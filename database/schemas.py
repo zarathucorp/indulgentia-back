@@ -184,6 +184,7 @@ class OrderBase(BaseModel):
     started_at: date
     expired_at: date
     status: str | None = None
+    payment_key: str
 
 
 class OrderCreate(OrderBase):

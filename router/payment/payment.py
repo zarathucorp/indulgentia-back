@@ -71,7 +71,7 @@ async def confirm_payment(req: Request, request: ConfirmPaymentRequest):
 
             payment = response.json()
             order = OrderCreate(team_id=user_team_id, order_number=request.orderId,
-                                started_at=started_at, expired_at=expired_at, status=payment["status"])  # Need testing
+                                started_at=started_at, expired_at=expired_at, status=payment["status"], payment_key=request.paymentKey)  # Need testing
             order = order.model_dump(mode="json")
             data, count = supabase.table(
                 "order").insert(order).execute()
