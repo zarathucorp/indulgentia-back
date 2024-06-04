@@ -183,6 +183,7 @@ class OrderBase(BaseModel):
     order_number: str  # need verification?
     started_at: date
     expired_at: date
+    status: str | None = None
 
 
 class OrderCreate(OrderBase):
