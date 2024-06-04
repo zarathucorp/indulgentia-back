@@ -159,9 +159,9 @@ async def get_breadcrumb(req: Request, bucket_id: str):
 
 @router.get("/{bucket_id}/github_repo", tags=["bucket"])
 async def get_connected_github_repositories(req: Request, bucket_id: str):
-    # user: UUID4 = verify_user(req)
-    # if not user:
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     data = get_connected_gitrepo(uuid.UUID(bucket_id))
     # data, count = supabase.rpc(
     #     "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
