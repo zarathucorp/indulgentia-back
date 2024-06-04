@@ -300,8 +300,9 @@ def get_team_invite_received_list(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    data, count = supabase.table("team_invite").select(
-        "*").is_("is_accepted", "null").eq("invited_user_id", user).order("created_at").execute()
+    data, count = supabase.rpc("get_team_invite_and_team_and_user_setting", {
+                               "user_id": str(user)}).execute()
+    print(data)
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1]
