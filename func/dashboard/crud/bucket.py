@@ -99,7 +99,7 @@ def delete_bucket(bucket_id: UUID4):
 def get_connected_gitrepo(bucket_id: UUID4):
     try:
         data, count = supabase.table("gitrepo").select(
-            "*").eq("is_delete", False).eq("bucket_id", bucket_id).execute()
+            "*").eq("is_deleted", False).eq("bucket_id", bucket_id).execute()
         print('='*120)
         print(data, count)
         return data[1]
