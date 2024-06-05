@@ -91,7 +91,7 @@ async def add_note(req: Request,
     user_data, count = supabase.table("user_setting").select("first_name", "last_name").eq(
         "id", user).execute()
     username = user_data[1][0].get(
-        "first_name") + "   " + user_data[1][0].get("last_name")
+        "last_name") + " " + user_data[1][0].get("first_name")
     try:
         contents = []
         if files:
@@ -110,10 +110,9 @@ async def add_note(req: Request,
             raise HTTPException(
                 status_code=400, detail="Failed to get breadcrumb data")
         pdf_res = generate_pdf(title=title, username=username,
-                               note_id=str(note_id), description=description, files=files, contents=contents, project_title=breadcrumb_data[1][0].get("project_title"), signature_url=url)
+                               note_id=str(note_id), description=description, files=files, contents=contents, project_title=breadcrumb_data[1][0].get("project_title"), bucket_title=breadcrumb_data[1][0].get("bucket_title"), signature_url=url)
         await sign_pdf(pdf_res)
         signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id}_signed.pdf"
-        raise Exception(signed_pdf_res)
         # upload pdf
         with open(signed_pdf_res, "rb") as f:
             pdf_data = f.read()
