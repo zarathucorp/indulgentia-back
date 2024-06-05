@@ -88,7 +88,10 @@ async def add_note(req: Request,
         "verify_bucket", {"user_id": str(user), "bucket_id": str(bucket_id)}).execute()
     if not verify_bucket_data[1]:
         raise HTTPException(status_code=403, detail="Forbidden")
-
+    user_data, count = supabase.table("user_setting").select("first_name", "last_name").eq(
+        "id", user).execute()
+    username = user_data[1][0].get(
+        "first_name") + "   " + user_data[1][0].get("last_name")
     try:
         contents = []
         if files:
@@ -101,10 +104,16 @@ async def add_note(req: Request,
             url = generate_presigned_url(str(user) + ".png")
         else:
             url = None
-        pdf_res = generate_pdf(title=title, username=str(user),  # user_id -> username 수정 필요
-                               note_id=str(note_id), description=description, files=files, contents=contents, signature_url=url)
+        breadcrumb_data, count = supabase.rpc(
+            "bucket_breadcrumb_data", {"bucket_id": str(bucket_id)}).execute()
+        if not breadcrumb_data[1]:
+            raise HTTPException(
+                status_code=400, detail="Failed to get breadcrumb data")
+        pdf_res = generate_pdf(title=title, username=username,
+                               note_id=str(note_id), description=description, files=files, contents=contents, project_title=breadcrumb_data[1][0].get("project_title"), signature_url=url)
         await sign_pdf(pdf_res)
         signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id}_signed.pdf"
+        raise Exception(signed_pdf_res)
         # upload pdf
         with open(signed_pdf_res, "rb") as f:
             pdf_data = f.read()
