@@ -224,37 +224,6 @@ async def get_breadcrumb(req: Request, note_id: str):
     })
 
 
-@router.post("/{note_id}/timestamp", tags=["note"])
-def create_note_timestamp(req: Request, note_id: str):
-    import time
-    try:
-        test_id = uuid.UUID(note_id)
-    except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
-    data, count = supabase.table("note").select(
-        "id", "file_hash").eq("id", note_id).execute()
-    if not data[1]:
-        raise HTTPException(status_code=400, detail="Failed to get note")
-    file_hash = data[1][0].get("file_hash")
-    content = {
-        "id": note_id,
-        "hash": file_hash,
-    }
-    ledger_res = write_ledger(content)
-
-    # Test required
-    data, count = supabase.table("note").update(
-        "transaction_id", ledger_res["transactionId"]).eq("id", note_id).execute()
-    if not data[1]:
-        raise HTTPException(status_code=400, detail="Failed to update note")
-    res = data[1][0]
-
-    return JSONResponse(content={
-        "status": "succeed",
-        "data": res
-    })
-
-
 @router.get("/{note_id}/timestamp", tags=["note"])
 def get_note_timestamp(req: Request, note_id: str):
     try:
