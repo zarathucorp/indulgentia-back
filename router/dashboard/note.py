@@ -84,20 +84,36 @@ async def add_note(req: Request,
     note_id = uuid.uuid4()
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    data, count = supabase.rpc(
+    verify_bucket_data, count = supabase.rpc(
         "verify_bucket", {"user_id": str(user), "bucket_id": str(bucket_id)}).execute()
-    if not data[1]:
+    if not verify_bucket_data[1]:
         raise HTTPException(status_code=403, detail="Forbidden")
-
+    user_data, count = supabase.table("user_setting").select("first_name", "last_name").eq(
+        "id", user).execute()
+    username = user_data[1][0].get(
+        "first_name") + "   " + user_data[1][0].get("last_name")
     try:
         contents = []
         if files:
             for file in files:
                 contents.append(await file.read())
-        pdf_res = generate_pdf(title=title, username=str(user),  # user_id -> username 수정 필요
-                               note_id=str(note_id), description=description, files=files, contents=contents)
+        user_signature_data, count = supabase.table("user_setting").select(
+            "has_signature").eq("id", user).execute()
+        has_signature = user_signature_data[1][0].get("has_signature")
+        if has_signature:
+            url = generate_presigned_url(str(user) + ".png")
+        else:
+            url = None
+        breadcrumb_data, count = supabase.rpc(
+            "bucket_breadcrumb_data", {"bucket_id": str(bucket_id)}).execute()
+        if not breadcrumb_data[1]:
+            raise HTTPException(
+                status_code=400, detail="Failed to get breadcrumb data")
+        pdf_res = generate_pdf(title=title, username=username,
+                               note_id=str(note_id), description=description, files=files, contents=contents, project_title=breadcrumb_data[1][0].get("project_title"), signature_url=url)
         await sign_pdf(pdf_res)
         signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id}_signed.pdf"
+        raise Exception(signed_pdf_res)
         # upload pdf
         with open(signed_pdf_res, "rb") as f:
             pdf_data = f.read()
@@ -221,37 +237,6 @@ async def get_breadcrumb(req: Request, note_id: str):
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1][0]
-    })
-
-
-@router.post("/{note_id}/timestamp", tags=["note"])
-def create_note_timestamp(req: Request, note_id: str):
-    import time
-    try:
-        test_id = uuid.UUID(note_id)
-    except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
-    data, count = supabase.table("note").select(
-        "id", "file_hash").eq("id", note_id).execute()
-    if not data[1]:
-        raise HTTPException(status_code=400, detail="Failed to get note")
-    file_hash = data[1][0].get("file_hash")
-    content = {
-        "id": note_id,
-        "hash": file_hash,
-    }
-    ledger_res = write_ledger(content)
-
-    # Test required
-    data, count = supabase.table("note").update(
-        "transaction_id", ledger_res["transactionId"]).eq("id", note_id).execute()
-    if not data[1]:
-        raise HTTPException(status_code=400, detail="Failed to update note")
-    res = data[1][0]
-
-    return JSONResponse(content={
-        "status": "succeed",
-        "data": res
     })
 
 

@@ -86,10 +86,29 @@ def convert_doc_to_pdf(source_path: str, file_name: str, extension: str):
     return f"{file_name}.pdf"
 
 
-def create_intro_page(title: str, author: str, description: str | None, SOURCE_PATH: str, note_id: str):
+def split_text(text: str, max_width: int, pdf: FPDF):
+    words = text.split()
+    lines = []
+    current_line = ""
+
+    for word in words:
+        if pdf.get_string_width(current_line + " " + word) <= max_width:
+            current_line += " " + word
+        else:
+            lines.append(current_line)
+            current_line = word
+
+    if current_line:
+        lines.append(current_line)
+
+    return lines
+
+
+def create_intro_page(title: str, author: str, description: str | None, SOURCE_PATH: str, note_id: str, project_title: str, signature_url: str | None = None):
     from datetime import datetime
 
     pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=5)
 
     date = datetime.now().strftime("%Y-%m-%d")
     pdf.add_page()
@@ -97,13 +116,13 @@ def create_intro_page(title: str, author: str, description: str | None, SOURCE_P
     pdf.add_font("Pretendard", style="",
                  fname=f"{SOURCE_PATH}/Pretendard-Regular.ttf")
     pdf.set_font("Pretendard", size=24)
-    pdf.cell(200, 10, txt=title, ln=True, align='C')
-    pdf.set_font("Pretendard", size=12)
-    pdf.cell(200, 10, txt=f"Author: {author}", ln=True, align='L')
-    pdf.cell(200, 10, txt=f"Date: {date}", ln=True, align='L')
-    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.cell(200, 10, text=title, ln=True, align='C')
+    pdf.set_y(pdf.get_y()+10)
+    pdf.line(0, pdf.get_y(), pdf.w, pdf.get_y())
 
+    pdf.set_y(pdf.get_y())
     pdf.set_font("Pretendard", size=12)
+    pdf.cell(200, 10, text="Description", ln=True, align='L')
     if description:
         # # Limit description to 2000 characters
         # description = description.encode(
@@ -113,13 +132,71 @@ def create_intro_page(title: str, author: str, description: str | None, SOURCE_P
         pdf.set_font("Pretendard", size=12)
         pdf.multi_cell(0, 10, description)
 
+    # title = "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+    # title = "대통령은 제3항과 제4항의 사유를 지체없이 공포하여야 한다. 선거에 있어서 최고득표자가 2인 이상인 때에는 국회의 재적의원 과반수가 출석한 공개회의에서 다수표를 얻은 자를 당선자로 한다. 국무총리는 국회의 동의를 얻어 대통령이 임명한다. 모든 국민은 신체의 자유를 가진다. 누구든지 법률에 의하지 아니하고는 체포·구속·압수·수색 또는 심문을 받지 아니하며, 법률과 적법한 절차에 의하지 아니하고는 처벌·보안처분 또는 강제노역을 받지 아니한다. 국회의 회의는 공개한다. 다만, 출석의원 과반수의 찬성이 있거나 의장이 국가의 안전보장을 위하여 필요하다고 인정할 때에는 공개하지 아니할 수 있다."
+    # Footer
+    pdf.set_font("Pretendard")
+    pdf.set_y(pdf.h - 40)
+    pdf.line(0, pdf.get_y(), pdf.w, pdf.get_y())
+    pdf.set_y(pdf.get_y() + 5)
+    pdf.set_x(35)
+    pdf.set_font_size(10)
+    pdf.set_text_color(157, 1, 1)
+    pdf.cell(15, 10, text="Project: ", ln=0, align='L')
+
+    pdf.set_font_size(12)
+    pdf.set_text_color(70, 70, 70)
+    lines = split_text(title, 89, pdf)
+    if len(lines) == 1:
+        pdf.cell(90, 10, text=f"{title}",
+                 ln=True, align='L', border="RB")
+    else:
+        pdf.set_font_size(8)
+        new_lines = split_text(title, 89, pdf)
+        title_1 = new_lines[0]
+        title_2 = new_lines[1] + '...'
+        pdf.cell(90, 5, text=f"{title_1}",
+                 ln=True, align='L', border="R")
+        pdf.set_x(50)
+        pdf.cell(90, 5, text=f"{title_2}",
+                 ln=True, align='L', border="RB")
+    pdf.set_x(35)
+    pdf.set_font_size(10)
+    pdf.set_text_color(157, 1, 1)
+    pdf.cell(15, 10, text="Author: ", ln=0, align='L')
+    pdf.set_font_size(12)
+    pdf.set_text_color(70, 70, 70)
+    pdf.cell(90, 10, text=f"{author}", ln=True, align='L', border="RB")
+    pdf.set_x(35)
+    pdf.set_font_size(10)
+    pdf.set_text_color(157, 1, 1)
+    pdf.cell(15, 10, text="Date: ", ln=0, align='L')
+    pdf.set_font_size(12)
+    pdf.set_text_color(70, 70, 70)
+    pdf.cell(90, 10, text=f"{date}", ln=0, align='L', border="R")
+    pdf.set_y(pdf.get_y() - 10)
+    pdf.set_x(140)
+    pdf.set_font_size(10)
+    pdf.set_text_color(157, 1, 1)
+    pdf.cell(20, 10, text=f"Signature: ", ln=True, align='L')
+
+    if signature_url:
+        img_width = 50
+        img_height = 20
+
+        img_x = pdf.w - img_width - 0
+        # Set the y coordinate of the image to the current y coordinate plus the height of the cell
+        img_y = pdf.get_y() - 15
+
+        pdf.image(signature_url, x=img_x, y=img_y, w=img_width, h=img_height)
+
     res = pdf.output()
     with open(f"{SOURCE_PATH}/output/{note_id}_intro.pdf", 'wb') as f:
         f.write(res)
         print(f"{SOURCE_PATH}/output/{note_id}_intro.pdf saved")
 
 
-def generate_pdf(title: str, username: str, note_id: str, description: str | None, files: List[Union[UploadFile, None]], contents: List[Union[bytes, None]]):
+def generate_pdf(title: str, username: str, note_id: str, description: str | None, files: List[Union[UploadFile, None]], contents: List[Union[bytes, None]], project_title: str, signature_url: str | None = None):
     SOURCE_PATH = "func/dashboard/pdf_generator"
     DOC_EXTENSIONS = ["doc", "docx", "hwp",
                       "hwpx", "ppt", "pptx", "xls", "xlsx"]
@@ -130,7 +207,8 @@ def generate_pdf(title: str, username: str, note_id: str, description: str | Non
     # Intro PDF
     print(description)
     print(files)
-    create_intro_page(title, username, description, SOURCE_PATH, note_id)
+    create_intro_page(title, username, description,
+                      SOURCE_PATH, note_id, project_title, signature_url)
 
     if files:
         if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):

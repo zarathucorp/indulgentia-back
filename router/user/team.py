@@ -155,12 +155,16 @@ def accept_team_invite(req: Request, team_id: str, invite: TeamInviteRequest):
 
     is_invite_accepted = validate_invite_accepted(UUID(invite.invite_id))
     if is_invite_accepted == False:
+        invite_data, count = supabase.table("team_invite").update({"is_deleted": True}).eq(
+            "id", invite.invite_id).execute()
         raise HTTPException(status_code=400, detail="Invite already rejected")
     elif is_invite_accepted == True:
+        invite_data, count = supabase.table("team_invite").update({"is_deleted": True}).eq(
+            "id", invite.invite_id).execute()
         raise HTTPException(status_code=400, detail="Invite already accepted")
     else:  # is_invite_accepted == None
         team_invite_data, count = supabase.table("team_invite").update(
-            {"is_accepted": True}).eq("id", invite.invite_id).execute()
+            {"is_accepted": True, "is_deleted": True}).eq("id", invite.invite_id).execute()
         if not team_invite_data[1]:
             raise HTTPException(
                 status_code=400, detail="Failed to accept team invite")
@@ -191,12 +195,16 @@ def reject_team_invite(req: Request, team_id: str, invite: TeamInviteRequest):
 
     is_invite_accepted = validate_invite_accepted(UUID(invite.invite_id))
     if is_invite_accepted == False:
+        invite_data, count = supabase.table("team_invite").update({"is_deleted": True}).eq(
+            "id", invite.invite_id).execute()
         raise HTTPException(status_code=400, detail="Invite already rejected")
     elif is_invite_accepted == True:
+        invite_data, count = supabase.table("team_invite").update({"is_deleted": True}).eq(
+            "id", invite.invite_id).execute()
         raise HTTPException(status_code=400, detail="Invite already accepted")
     else:  # is_invite_accepted == None
         data, count = supabase.table("team_invite").update(
-            {"is_accepted": False}).eq("id", invite.invite_id).execute()
+            {"is_accepted": False, "is_deleted": True}).eq("id", invite.invite_id).execute()
         if not data[1]:
             raise HTTPException(
                 status_code=400, detail="Failed to reject team invite")
@@ -279,7 +287,7 @@ def send_team_invite_by_email(req: Request, invite: TeamInviteEmailRequest):
     if not validate_user_free(UUID(invited_user_id)):
         raise HTTPException(status_code=403, detail="Already in team")
     check_team_invite_data, count = supabase.table("team_invite").select(
-        "*").neq("is_accepted", False).eq("invited_user_id", invited_user_id).eq("team_id", team_id).execute()
+        "*").eq("is_deleted", False).eq("invited_user_id", invited_user_id).eq("team_id", team_id).execute()
     print(check_team_invite_data[1])
     if check_team_invite_data[1]:
         raise HTTPException(status_code=400, detail="Invite already sent")
@@ -318,7 +326,7 @@ def get_team_invite_sent_list(req: Request):
     if not validate_user_is_leader(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not a team leader")
     data, count = supabase.table("team_invite").select(
-        "*").is_("is_accepted", "null").eq("team_id", team_id).order("created_at").execute()
+        "*").eq("is_deleted", False).is_("is_accepted", "null").eq("team_id", team_id).order("created_at").execute()
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1]
@@ -342,4 +350,28 @@ def get_team_invite_single(req: Request, invite_id: str):
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1][0]
+    })
+
+
+@router.get("/invite/{invite_id}/cancel", tags=["team"])
+def cancel_team_invite_single(req: Request, invite_id: str):
+    try:
+        test_id = UUID(invite_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    team_id = get_user_team(user)
+    if not validate_user_is_leader(user, UUID(team_id)):
+        raise HTTPException(status_code=403, detail="Not a team leader")
+    data, count = supabase.table("team_invite").update(
+        {"is_deleted": True}).eq("id", invite_id).execute()
+    if not data[1]:
+        raise HTTPException(
+            status_code=400, detail="Failed to cancel team invite")
+    res = data[1][0]
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": res
     })
