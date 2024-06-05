@@ -353,12 +353,12 @@ def get_team_invite_single(req: Request, invite_id: str):
     })
 
 
-@router.get("/invite/{invite_id}/cancel", tags=["team"])
-def cancel_team_invite_single(req: Request, invite_id: str):
-    try:
-        test_id = UUID(invite_id)
-    except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
+class TeamInviteRequest(BaseModel):
+    invite_id: UUID4
+
+
+@router.delete("/invite/cancel", tags=["team"])
+def cancel_team_invite(req: Request, team_invite: TeamInviteRequest):
     user: UUID4 = verify_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -366,7 +366,7 @@ def cancel_team_invite_single(req: Request, invite_id: str):
     if not validate_user_is_leader(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not a team leader")
     data, count = supabase.table("team_invite").update(
-        {"is_deleted": True}).eq("id", invite_id).execute()
+        {"is_deleted": True}).eq("id", team_invite.invite_id).execute()
     if not data[1]:
         raise HTTPException(
             status_code=400, detail="Failed to cancel team invite")
