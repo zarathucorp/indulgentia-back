@@ -84,9 +84,9 @@ async def add_note(req: Request,
     note_id = uuid.uuid4()
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    data, count = supabase.rpc(
+    verify_bucket_data, count = supabase.rpc(
         "verify_bucket", {"user_id": str(user), "bucket_id": str(bucket_id)}).execute()
-    if not data[1]:
+    if not verify_bucket_data[1]:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     try:
@@ -94,8 +94,15 @@ async def add_note(req: Request,
         if files:
             for file in files:
                 contents.append(await file.read())
+        user_signature_data, count = supabase.table("user_setting").select(
+            "has_signature").eq("id", user).execute()
+        has_signature = user_signature_data[1][0].get("has_signature")
+        if has_signature:
+            url = generate_presigned_url(str(user) + ".png")
+        else:
+            url = None
         pdf_res = generate_pdf(title=title, username=str(user),  # user_id -> username 수정 필요
-                               note_id=str(note_id), description=description, files=files, contents=contents)
+                               note_id=str(note_id), description=description, files=files, contents=contents, signature_url=url)
         await sign_pdf(pdf_res)
         signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id}_signed.pdf"
         # upload pdf

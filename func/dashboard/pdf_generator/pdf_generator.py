@@ -86,7 +86,7 @@ def convert_doc_to_pdf(source_path: str, file_name: str, extension: str):
     return f"{file_name}.pdf"
 
 
-def create_intro_page(title: str, author: str, description: str | None, SOURCE_PATH: str, note_id: str):
+def create_intro_page(title: str, author: str, description: str | None, SOURCE_PATH: str, note_id: str, signature_url: str | None = None):
     from datetime import datetime
 
     pdf = FPDF()
@@ -112,6 +112,16 @@ def create_intro_page(title: str, author: str, description: str | None, SOURCE_P
         print(description)
         pdf.set_font("Pretendard", size=12)
         pdf.multi_cell(0, 10, description)
+    if signature_url:
+        # 이미지 크기
+        img_width = 100
+        img_height = 40
+
+        # 이미지 위치
+        img_x = pdf.w - img_width - 0  # 우측 여백 0
+        img_y = pdf.h - img_height - 0  # 하단 여백 0
+
+        pdf.image(signature_url, x=img_x, y=img_y, w=img_width, h=img_height)
 
     res = pdf.output()
     with open(f"{SOURCE_PATH}/output/{note_id}_intro.pdf", 'wb') as f:
@@ -119,7 +129,7 @@ def create_intro_page(title: str, author: str, description: str | None, SOURCE_P
         print(f"{SOURCE_PATH}/output/{note_id}_intro.pdf saved")
 
 
-def generate_pdf(title: str, username: str, note_id: str, description: str | None, files: List[Union[UploadFile, None]], contents: List[Union[bytes, None]]):
+def generate_pdf(title: str, username: str, note_id: str, description: str | None, files: List[Union[UploadFile, None]], contents: List[Union[bytes, None]], signature_url: str | None = None):
     SOURCE_PATH = "func/dashboard/pdf_generator"
     DOC_EXTENSIONS = ["doc", "docx", "hwp",
                       "hwpx", "ppt", "pptx", "xls", "xlsx"]
@@ -130,7 +140,8 @@ def generate_pdf(title: str, username: str, note_id: str, description: str | Non
     # Intro PDF
     print(description)
     print(files)
-    create_intro_page(title, username, description, SOURCE_PATH, note_id)
+    create_intro_page(title, username, description,
+                      SOURCE_PATH, note_id, signature_url)
 
     if files:
         if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
@@ -183,6 +194,8 @@ def generate_pdf(title: str, username: str, note_id: str, description: str | Non
     print(pdfs)
     pdfmerge(pdfs, f"{SOURCE_PATH}/output/{note_id}.pdf")
     print(f"{SOURCE_PATH}/output/{note_id}.pdf saved")
+
+    raise HTTPException(status_code=500, detail="Test Error")
 
     # delete files
     try:
