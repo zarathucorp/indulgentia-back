@@ -81,8 +81,13 @@ import re
 
 # MS office & HWP to PDF
 def convert_doc_to_pdf(source_path: str, file_name: str, extension: str):
-    subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf",
-                   f"{source_path}/input/{file_name}.{extension}", "--outdir", f"{source_path}/output"])
+    try:
+        subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf",
+                        f"{source_path}/input/{file_name}.{extension}", "--outdir", f"{source_path}/output"])
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code=500, detail="Failed to convert doc to pdf")
     return f"{file_name}.pdf"
 
 
@@ -225,13 +230,6 @@ def generate_pdf(title: str, username: str, note_id: str, description: str | Non
                       SOURCE_PATH, note_id, project_title, bucket_title, signature_url)
 
     if files:
-        if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
-            raise HTTPException(
-                status_code=422, detail="Unprocessable file extension")
-        for idx, file in enumerate(files):
-            extension = file.filename.split(".")[-1]
-            filename = f"{note_id}_{idx}"
-
         if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
             raise HTTPException(
                 status_code=422, detail="Unprocessable file extension")
