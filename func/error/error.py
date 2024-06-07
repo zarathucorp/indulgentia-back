@@ -1,20 +1,13 @@
-import re
 from fastapi import HTTPException
 
 
-def is_three_digit_number(s: str):
-    return bool(re.match(r"^[0-9]{3}$", s))
-
-
-def is_two_digit_number(s: str):
-    return bool(re.match(r"^[0-9]{2}$", s))
-
-
-def custom_error(status_code: str, additional_code: str):
-    if not is_three_digit_number(status_code):
+def custom_error(status_code: int, additional_code: int):
+    if status_code < 100 or status_code > 999:
         raise Exception("status_code must be a three-digit number")
-    if not is_two_digit_number(additional_code):
+    if additional_code < 10 or additional_code > 99:
         raise Exception("additional_code must be a two-digit number")
+    status_code_string = str(status_code)
+    additional_code_string = str(additional_code)
 
     CUSTOM_CODE_DETAIL = {
         # Unauthorized
@@ -44,15 +37,15 @@ def custom_error(status_code: str, additional_code: str):
 
         },
     }
-    custom_code = status_code + additional_code
+    custom_code_string = status_code_string + additional_code_string
 
-    if CUSTOM_CODE_DETAIL.get(status_code, None):
-        if CUSTOM_CODE_DETAIL[status_code].get(additional_code, None):
-            res = custom_code + " " + \
-                CUSTOM_CODE_DETAIL[status_code][additional_code]
+    if CUSTOM_CODE_DETAIL.get(status_code_string, None):
+        if CUSTOM_CODE_DETAIL[status_code_string].get(additional_code_string, None):
+            res = custom_code_string + " " + \
+                CUSTOM_CODE_DETAIL[status_code_string][additional_code_string]
         else:
-            res = custom_code + " Unknown error"
+            res = custom_code_string + " Unknown error"
     else:
-        res = custom_code + " Unknown error"
+        res = custom_code_string + " Unknown error"
 
-    raise HTTPException(status_code=int(status_code), detail=res)
+    raise HTTPException(status_code=status_code, detail=res)
