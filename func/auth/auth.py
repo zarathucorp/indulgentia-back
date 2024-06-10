@@ -11,6 +11,7 @@ from database.supabase import supabase
 from gotrue.errors import AuthApiError
 from env import SUPABASE_URL
 import uuid
+from func.error.error import raise_custom_error
 load_dotenv()
 
 JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
@@ -62,7 +63,8 @@ def verify_user(req: Request) -> UUID4:
 
     # 쿠키 없는경우 Exception
     if (SUPABASE_COOKIE is None) | (SUPABASE_COOKIE == ""):
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 211)
+        # raise HTTPException(status_code=401, detail="Unauthorized")
     SUPABASE_COOKIE_DICT = json.loads(urllib.parse.unquote(
         SUPABASE_COOKIE))
     access_token = SUPABASE_COOKIE_DICT.get("access_token")
@@ -71,10 +73,11 @@ def verify_user(req: Request) -> UUID4:
         user = data.user
         return user.id
     except AuthApiError:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(401, 110)
+        # raise HTTPException(status_code=401, detail="Unauthorized")
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Internal Server Error: {e}")
+        raise_custom_error(500, 200)
+        # raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
 
 
 # 최적화 필요함 (너무 많은 Query 요청)
@@ -84,7 +87,7 @@ def verify_team(user_id: UUID4, team_id: UUID4) -> bool:
     data, count = supabase.table("user_setting").select(
         "team_id").eq("id", user_id).execute()
     if not data[1]:
-        raise HTTPException(status_code=400, detail="No data from user_id")
+        raise_custom_error(500, 231)
     left_team_id = uuid.UUID(data[1][0].get("team_id"))
 
     return left_team_id == team_id
