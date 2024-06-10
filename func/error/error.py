@@ -100,6 +100,7 @@ def raise_custom_error(status_code: int, additional_code: int):
             "210": "Invalid UUID format",
             "220": "Invalid email format",
             "230": "Invalid date format",
+            "231": "Start date is later than end date",
             "240": "Invalid file extension",
         },
 
