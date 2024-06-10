@@ -325,8 +325,8 @@ def get_team_invite_sent_list(req: Request):
     team_id = get_user_team(user)
     if not validate_user_is_leader(user, UUID(team_id)):
         raise HTTPException(status_code=403, detail="Not a team leader")
-    data, count = supabase.table("team_invite").select(
-        "*").eq("is_deleted", False).is_("is_accepted", "null").eq("team_id", team_id).order("created_at").execute()
+    data, count = supabase.rpc("get_team_invite_send_and_team_and_user_setting", {
+                               "sent_team_id": team_id}).execute()
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1]
