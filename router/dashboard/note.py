@@ -225,8 +225,13 @@ async def get_note_file(req: Request, note_id: str):
     if not user:
         raise_custom_error(403, 213)
     # generate_presigned_url 오류 시 500 에러 발생
-    url = generate_presigned_url(note_id + ".pdf")
-    return JSONResponse(content={"status": "succeed", "url": url})
+    try:
+        url = generate_presigned_url(note_id + ".pdf")
+        return JSONResponse(content={"status": "succeed", "url": url})
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 312)
+        # return JSONResponse(status_code=400, content={"status": "failed", "message": str(e)})
 
 
 @router.get("/{note_id}/breadcrumb", tags=["note"])
