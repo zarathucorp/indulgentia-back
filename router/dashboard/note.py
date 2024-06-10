@@ -14,6 +14,7 @@ from func.auth.auth import *
 from func.dashboard.pdf_generator.pdf_generator import generate_pdf
 from func.note_handling.pdf_sign import sign_pdf
 from cloud.azure.confidential_lendger import write_ledger, read_ledger
+from func.error.error import raise_custom_error
 
 
 router = APIRouter(
@@ -28,16 +29,16 @@ router = APIRouter(
 @router.get("/list/{bucket_id}", tags=["note"])
 async def get_note_list(req: Request, bucket_id: str):
     try:
-        test_id = uuid.UUID(bucket_id)
+        uuid.UUID(bucket_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.rpc(
         "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     if not data[1]:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(401, 310)
     res = read_note_list(bucket_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -50,16 +51,16 @@ async def get_note_list(req: Request, bucket_id: str):
 @router.get("/{note_id}", tags=["note"])
 async def get_note(req: Request, note_id: str):
     try:
-        test_id = uuid.UUID(note_id)
+        uuid.UUID(note_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.rpc(
         "verify_note", {"user_id": user, "note_id": note_id}).execute()
     if not data[1]:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(401, 410)
     res = read_note(note_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -83,11 +84,11 @@ async def add_note(req: Request,
     user: UUID4 = verify_user(req)
     note_id = uuid.uuid4()
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     verify_bucket_data, count = supabase.rpc(
         "verify_bucket", {"user_id": str(user), "bucket_id": str(bucket_id)}).execute()
     if not verify_bucket_data[1]:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(401, 310)
     user_data, count = supabase.table("user_setting").select("first_name", "last_name").eq(
         "id", user).execute()
     username = user_data[1][0].get(
@@ -97,40 +98,47 @@ async def add_note(req: Request,
         if files:
             for file in files:
                 contents.append(await file.read())
-        user_signature_data, count = supabase.table("user_setting").select(
-            "has_signature").eq("id", user).execute()
-        has_signature = user_signature_data[1][0].get("has_signature")
-        if has_signature:
-            url = generate_presigned_url(str(user) + ".png")
-        else:
-            url = None
-        breadcrumb_data, count = supabase.rpc(
-            "bucket_breadcrumb_data", {"bucket_id": str(bucket_id)}).execute()
-        if not breadcrumb_data[1]:
-            raise HTTPException(
-                status_code=400, detail="Failed to get breadcrumb data")
-        pdf_res = generate_pdf(title=title, username=username,
-                               note_id=str(note_id), description=description, files=files, contents=contents, project_title=breadcrumb_data[1][0].get("project_title"), bucket_title=breadcrumb_data[1][0].get("bucket_title"), signature_url=url)
-        await sign_pdf(pdf_res)
-        signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id}_signed.pdf"
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 120)
+    user_signature_data, count = supabase.table("user_setting").select(
+        "has_signature").eq("id", user).execute()
+    has_signature = user_signature_data[1][0].get("has_signature")
+    if has_signature:
+        url = generate_presigned_url(str(user) + ".png")
+    else:
+        url = None
+    breadcrumb_data, count = supabase.rpc(
+        "bucket_breadcrumb_data", {"bucket_id": str(bucket_id)}).execute()
+    if not breadcrumb_data[1]:
+        raise_custom_error(500, 250)
+    pdf_res = generate_pdf(title=title, username=username,
+                           note_id=str(note_id), description=description, files=files, contents=contents, project_title=breadcrumb_data[1][0].get("project_title"), bucket_title=breadcrumb_data[1][0].get("bucket_title"), signature_url=url)
+    await sign_pdf(pdf_res)
+    signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id}_signed.pdf"
+    try:
         # upload pdf
         with open(signed_pdf_res, "rb") as f:
             pdf_data = f.read()
-        upload_blob(pdf_data, str(note_id) + ".pdf")
-        ledger_result = write_ledger(
-            {"id": str(note_id), "hash": hashlib.sha256(pdf_data).hexdigest()})
-        transaction_id = ledger_result.get("transactionId")
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail=str(e))
-    # delete result pdf
-    SOURCE_PATH = "func/dashboard/pdf_generator"
-    if os.path.isfile(f"{SOURCE_PATH}/output/{note_id}.pdf"):
-        os.unlink(f"{SOURCE_PATH}/output/{note_id}.pdf")
-        print(f"{SOURCE_PATH}/output/{note_id}.pdf deleted")
-    if os.path.isfile(f"{SOURCE_PATH}/output/{note_id}_signed.pdf"):
-        os.unlink(f"{SOURCE_PATH}/output/{note_id}_signed.pdf")
-        print(f"{SOURCE_PATH}/output/{note_id}_signed.pdf deleted")
+        raise_custom_error(500, 120)
+    upload_blob(pdf_data, str(note_id) + ".pdf")
+    ledger_result = write_ledger(
+        {"id": str(note_id), "hash": hashlib.sha256(pdf_data).hexdigest()})
+    transaction_id = ledger_result.get("transactionId")
+    try:
+        # delete result pdf
+        SOURCE_PATH = "func/dashboard/pdf_generator"
+        if os.path.isfile(f"{SOURCE_PATH}/output/{note_id}.pdf"):
+            os.unlink(f"{SOURCE_PATH}/output/{note_id}.pdf")
+            print(f"{SOURCE_PATH}/output/{note_id}.pdf deleted")
+        if os.path.isfile(f"{SOURCE_PATH}/output/{note_id}_signed.pdf"):
+            os.unlink(f"{SOURCE_PATH}/output/{note_id}_signed.pdf")
+            print(f"{SOURCE_PATH}/output/{note_id}_signed.pdf deleted")
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 130)
 
     note = schemas.NoteCreate(
         id=note_id,
@@ -154,9 +162,9 @@ async def add_note(req: Request,
 async def change_note(req: Request, note: schemas.NoteUpdate):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     if not user == note.user_id:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(401, 420)
 
     # need verify timestamp logic
 
@@ -172,18 +180,18 @@ async def change_note(req: Request, note: schemas.NoteUpdate):
 @router.delete("/{note_id}", tags=["note"])
 async def drop_note(req: Request, note_id: str):
     try:
-        test_id = uuid.UUID(note_id)
+        uuid.UUID(note_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.table("note").select(
         "user_id").eq("id", note_id).execute()
     if not data[1]:
-        raise HTTPException(status_code=400, detail="No data")
+        raise_custom_error(500, 242)
     if not user == data[1][0]["user_id"]:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(401, 420)
     res = flag_is_deleted_note(note_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -213,26 +221,27 @@ async def drop_note(req: Request, note_id: str):
 @router.get("/file/{note_id}", tags=["note"])
 async def get_note_file(req: Request, note_id: str):
     # Auth 먼저 해야함
-    try:
-        url = generate_presigned_url(note_id + ".pdf")
-        return JSONResponse(content={"status": "succeed", "url": url})
-    except Exception as e:
-        return JSONResponse(status_code=400, content={"status": "failed", "message": str(e)})
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise_custom_error(403, 213)
+    # generate_presigned_url 오류 시 500 에러 발생
+    url = generate_presigned_url(note_id + ".pdf")
+    return JSONResponse(content={"status": "succeed", "url": url})
 
 
 @router.get("/{note_id}/breadcrumb", tags=["note"])
 async def get_breadcrumb(req: Request, note_id: str):
     try:
-        test_id = uuid.UUID(note_id)
+        uuid.UUID(note_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.rpc(
         "note_breadcrumb_data", {"note_id": note_id}).execute()
     if not data[1]:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(500, 250)
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1][0]
@@ -242,13 +251,16 @@ async def get_breadcrumb(req: Request, note_id: str):
 @router.get("/{note_id}/timestamp", tags=["note"])
 def get_note_timestamp(req: Request, note_id: str):
     try:
-        test_id = uuid.UUID(note_id)
+        uuid.UUID(note_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
+        raise_custom_error(422, 210)
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise_custom_error(403, 213)
     data, count = supabase.table("note").select(
         "transaction_id").eq("id", note_id).execute()
     if not data[1]:
-        raise HTTPException(status_code=400, detail="Failed to get note")
+        raise_custom_error(500, 231)
     transaction_id = data[1][0].get("transaction_id")
     entry = read_ledger(transaction_id)
 

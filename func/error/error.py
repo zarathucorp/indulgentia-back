@@ -85,9 +85,9 @@ def raise_custom_error(status_code: int, additional_code: int):
             "213": "Forbidden due to cookie having no user",
         },
 
-        # 404 Not found
+        # 404 Not Found
         "A4": {
-            "000": "Not found",
+            "000": "Not Found",
         },
 
         # 422 Unprocessable Entity
@@ -113,7 +113,7 @@ def raise_custom_error(status_code: int, additional_code: int):
             "120": "Python file read error",
             "130": "Python file delete error",
 
-            "200": "Supabase Error",
+            "200": "Supabase error",
             "210": "Supabase insert error",
             "220": "Supabase update error",
             "231": "Supabase single select error",
@@ -123,25 +123,31 @@ def raise_custom_error(status_code: int, additional_code: int):
             "242": "Supabase soft delete error",
             "250": "Supabase RPC error",
 
-            "300": "Azure Blob Storage Error",
-            "310": "Azure Blob Storage upload error",
-            "320": "Azure Blob Storage download error",
+            "300": "Azure Blob error",
+            "310": "Azure Blob Storage connection error",
+            "311": "Azure Blob Storage upload error",
+            "312": "Azure Blob Storage download error",
+            "313": "Azure Blob Storage delete error",
+            "320": "Azure Confidential Ledger connection error",
+            "321": "Azure Confidential Ledger write error",
+            "322": "Azure Confidential Ledger read error",
+            "323": "Azure Confidential Ledger status error",
 
-            "400": "PDF Generation Error",
-            "410": "Introduction PDF Generation Error using FPDF2",
-            "420": "Document PDF Generation Error using Libreoffice",
-            "430": "Image PDF Generation Error using Pillow",
-            "440": "PDF merge error",
-            "450": "PDF sign error",
+            "400": "PDF generation error",
+            "410": "Introduction PDF Generation error using FPDF2",
+            "420": "Document PDF Generation error using Libreoffice",
+            "430": "Image PDF Generation error using Pillow",
+            "440": "PDF merge error using pdfmerge",
+            "450": "PDF sign error using pyHanko",
 
-            "500": "Payment Error",
-            "510": "Tosspayments API Error",
+            "500": "Payment error",
+            "510": "Tosspayments API error",
 
-            "600": "Github API Error",
+            "600": "Github API error",
         },
 
         "C0": {
-            "000": "Unknown error"
+            "000": "Unknown Error"
         },
     }
     custom_status_code_string = CUSTOM_STATUS_CODE.get(status_code, "C0")
