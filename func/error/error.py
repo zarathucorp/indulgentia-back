@@ -34,7 +34,9 @@ def raise_custom_error(status_code: int, additional_code: int):
         "A1": {
             "000": "Unauthorized",
 
-            "100": "Unauthorized user access to User Setting",
+            "100": "Unauthorized user access to User Database",
+            "110": "Access to auth.users denied",
+            "120": "Access to public.user_setting denied",
 
             "200": "Unauthorized user access to Project",
             "210": "User is not in this project",
@@ -65,7 +67,22 @@ def raise_custom_error(status_code: int, additional_code: int):
         "A3": {
             "000": "Forbidden",
 
-            "100": "Forbidden user access",
+            "100": "Forbidden due to abnormal access",
+            "110": "Forbidden due to too many requests",
+            "111": "Forbidden due to too many requests from the same IP",
+            "112": "Forbidden due to too many requests from the same user",
+
+            "120": "Forbidden due to forged request",
+            "121": "Forbidden due to forged request header",
+            "122": "Forbidden due to forged request body",
+            "123": "Forbidden due to forged request method",
+            "124": "Forbidden due to forged cookie",
+
+            "200": "Forbidden user access",
+            "210": "Forbidden due to cookie",
+            "211": "Forbidden due to cookie not found",
+            "212": "Forbidden due to cookie expired",
+            "213": "Forbidden due to cookie having no user",
         },
 
         # 404 Not found
@@ -98,10 +115,12 @@ def raise_custom_error(status_code: int, additional_code: int):
             "200": "Supabase Error",
             "210": "Supabase insert error",
             "220": "Supabase update error",
-            "230": "Supabase single select error",
-            "240": "Supabase multiple select error",
-            "250": "Supabase delete error",
-            "260": "Supabase RPC error",
+            "231": "Supabase single select error",
+            "232": "Supabase multiple select error",
+            "240": "Supabase delete error",
+            "241": "Supabase hard delete error",
+            "242": "Supabase soft delete error",
+            "250": "Supabase RPC error",
 
             "300": "Azure Blob Storage Error",
             "310": "Azure Blob Storage upload error",
