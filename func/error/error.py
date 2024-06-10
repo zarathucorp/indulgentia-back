@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 
 
-def custom_error(status_code: int, additional_code: int):
+def raise_custom_error(status_code: int, additional_code: int):
     if status_code < 100 or status_code > 999:
         raise Exception("status_code must be a three-digit number")
     if additional_code > 999:
