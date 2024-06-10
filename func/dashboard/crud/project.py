@@ -39,8 +39,6 @@ def read_project_list(team_id: UUID4):
     try:
         data, count = supabase.table("project").select(
             '*').eq("is_deleted", False).eq("team_id", team_id).order("created_at", desc=True).execute()
-        if not data[1]:
-            raise_custom_error(500, 232)
         return data[1]
     except Exception as e:
         print(e)

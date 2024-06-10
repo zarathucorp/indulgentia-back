@@ -36,8 +36,6 @@ def read_bucket_list(project_id: UUID4):
     try:
         data, count = supabase.table("bucket").select(
             '*').eq("is_deleted", False).eq("project_id", project_id).order("created_at", desc=True).execute()
-        if not data[1]:
-            raise_custom_error(500, 232)
         return data[1]
     except Exception as e:
         print(e)
