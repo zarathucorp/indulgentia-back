@@ -4,111 +4,134 @@ from fastapi import HTTPException
 def custom_error(status_code: int, additional_code: int):
     if status_code < 100 or status_code > 999:
         raise Exception("status_code must be a three-digit number")
-    if additional_code < 10 or additional_code > 99:
-        raise Exception("additional_code must be a two-digit number")
-    status_code_string = str(status_code)
-    additional_code_string = str(additional_code)
+    if additional_code > 999:
+        raise Exception("additional_code must be a three-digit number")
+    if additional_code < 10:
+        additional_code_string = "00" + str(additional_code)
+    elif additional_code < 100:
+        additional_code_string = "0" + str(additional_code)
+    else:
+        additional_code_string = str(additional_code)
 
+    CUSTOM_STATUS_CODE = {
+        # 401 Unauthorized
+        401: "A1",
+
+        # 403 Forbidden
+        403: "A3",
+
+        # 404 Not found
+        404: "A4",
+
+        # 422 Unprocessable Entity
+        422: "A2",
+
+        # 500 Internal Server Error
+        500: "B0",
+    }
     CUSTOM_CODE_DETAIL = {
-        # Unauthorized
-        "401": {
-            "00": "Unauthorized",
+        # 401 Unauthorized
+        "A1": {
+            "000": "Unauthorized",
 
-            "10": "Unauthorized user access to User Setting",
+            "100": "Unauthorized user access to User Setting",
 
-            "20": "Unauthorized user access to Project",
-            "21": "User is not in this project",
-            "22": "User is not this project leader",
+            "200": "Unauthorized user access to Project",
+            "210": "User is not in this project",
+            "220": "User is not this project leader",
 
-            "30": "Unauthorized user access to Bucket",
-            "31": "User is not in this bucket",
-            "32": "User is not this bucket owner",
+            "300": "Unauthorized user access to Bucket",
+            "310": "User is not in this bucket",
+            "320": "User is not this bucket owner",
 
-            "40": "Unauthorized user access to Note",
-            "41": "User is not in this note",
-            "42": "User is not this note owner",
+            "400": "Unauthorized user access to Note",
+            "410": "User is not in this note",
+            "420": "User is not this note owner",
 
-            "50": "Unauthorized user access to Team",
-            "51": "User is not in this team",
-            "52": "User is not this team leader",
-            "53": "User is already in team",
-            "54": "User is not in any team",
-            "55": "Members still exist in this team",
+            "500": "Unauthorized user access to Team",
+            "510": "User is not in this team",
+            "520": "User is not this team leader",
+            "530": "User is already in team",
+            "540": "User is not in any team",
+            "550": "Members still exist in this team",
 
-            "60": "Unauthorized user access to Team Invite",
-            "61": "User already accepted this team invite",
-            "62": "User already rejected this team invite",
-            "63": "Team invite request still exists",
+            "600": "Unauthorized user access to Team Invite",
+            "610": "User already accepted this team invite",
+            "620": "User already rejected this team invite",
+            "630": "Team invite request still exists",
         },
 
-        # Forbidden
-        "403": {
-            "00": "Forbidden",
+        # 403 Forbidden
+        "A3": {
+            "000": "Forbidden",
 
-            "10": "Forbidden user access",
+            "100": "Forbidden user access",
         },
 
-        # Not found
-        "404": {
-            "00": "Not found",
+        # 404 Not found
+        "A4": {
+            "000": "Not found",
         },
 
-        # Unprocessable Entity
-        "422": {
-            "00": "Unprocessable Entity",
+        # 422 Unprocessable Entity
+        "A2": {
+            "000": "Unprocessable Entity",
 
-            "10": "Invalid Pydantic model",
+            "100": "Invalid Pydantic model",
 
-            "20": "Invalid custom format",
-            "21": "Invalid UUID format",
-            "22": "Invalid email format",
-            "23": "Invalid date format",
-            "24": "Invalid file extension",
+            "200": "Invalid custom format",
+            "210": "Invalid UUID format",
+            "220": "Invalid email format",
+            "230": "Invalid date format",
+            "240": "Invalid file extension",
         },
 
-        # Internal Server Error
-        "500": {
-            "00": "Internal Server Error",
+        # 500 Internal Server Error
+        "B0": {
+            "000": "Internal Server Error",
 
-            "10": "Python file system error",
-            "11": "Python file write error",
-            "12": "Python file read error",
-            "13": "Python file delete error",
+            "100": "Python file system error",
+            "110": "Python file write error",
+            "120": "Python file read error",
+            "130": "Python file delete error",
 
-            "20": "Supabase Error",
-            "21": "Supabase insert error",
-            "22": "Supabase update error",
-            "23": "Supabase single select error",
-            "24": "Supabase multiple select error",
-            "25": "Supabase delete error",
-            "26": "Supabase RPC error",
+            "200": "Supabase Error",
+            "210": "Supabase insert error",
+            "220": "Supabase update error",
+            "230": "Supabase single select error",
+            "240": "Supabase multiple select error",
+            "250": "Supabase delete error",
+            "260": "Supabase RPC error",
 
-            "30": "Azure Blob Storage Error",
-            "31": "Azure Blob Storage upload error",
-            "32": "Azure Blob Storage download error",
+            "300": "Azure Blob Storage Error",
+            "310": "Azure Blob Storage upload error",
+            "320": "Azure Blob Storage download error",
 
-            "40": "PDF Generation Error",
-            "41": "Introduction PDF Generation Error using FPDF2",
-            "42": "Document PDF Generation Error using Libreoffice",
-            "43": "Image PDF Generation Error using Pillow",
-            "44": "PDF merge error",
-            "45": "PDF sign error",
+            "400": "PDF Generation Error",
+            "410": "Introduction PDF Generation Error using FPDF2",
+            "420": "Document PDF Generation Error using Libreoffice",
+            "430": "Image PDF Generation Error using Pillow",
+            "440": "PDF merge error",
+            "450": "PDF sign error",
 
-            "50": "Payment Error",
-            "51": "Tosspayments API Error",
+            "500": "Payment Error",
+            "510": "Tosspayments API Error",
 
-            "60": "Github API Error",
+            "600": "Github API Error",
+        },
+
+        "C0": {
+            "000": "Unknown error"
         },
     }
-    custom_code_string = status_code_string + additional_code_string
-
-    if CUSTOM_CODE_DETAIL.get(status_code_string, None):
-        if CUSTOM_CODE_DETAIL[status_code_string].get(additional_code_string, None):
-            res = custom_code_string + " " + \
-                CUSTOM_CODE_DETAIL[status_code_string][additional_code_string]
+    custom_status_code_string = CUSTOM_STATUS_CODE.get(status_code, "C0")
+    if custom_status_code_string != "C0":
+        if CUSTOM_CODE_DETAIL[custom_status_code_string].get(additional_code_string, None):
+            res = custom_status_code_string + additional_code_string + " " + \
+                CUSTOM_CODE_DETAIL[custom_status_code_string][additional_code_string]
         else:
-            res = custom_code_string + " Unknown error"
+            res = custom_status_code_string + additional_code_string + " Custom error not found"
     else:
-        res = custom_code_string + " Unknown error"
+        res = custom_status_code_string + "000" + " Unknown error"
 
     raise HTTPException(status_code=status_code, detail=res)
