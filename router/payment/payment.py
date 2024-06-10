@@ -5,6 +5,9 @@ from pydantic import BaseModel
 from fastapi import FastAPI, Request, HTTPException
 from fastapi import APIRouter
 from env import TOSS_PAYMENT_CLIENT_KEY, TOSS_PAYMENT_SECRET_KEY
+from func.error.error import raise_custom_error
+
+
 router = APIRouter(
     prefix="/payment",
     responses={404: {"description": "Not found"}},
@@ -50,11 +53,13 @@ async def confirm_payment(request: ConfirmPaymentRequest):
 
             if response.status_code != 200:
                 error_data = response.json()
-                raise HTTPException(
-                    status_code=400, detail=f"{error_data['code']}: {error_data['message']}")
+                raise_custom_error(500, 511)
+                # raise HTTPException(
+                #     status_code=400, detail=f"{error_data['code']}: {error_data['message']}")
 
             payment = response.json()
             return payment
 
     except httpx.HTTPError as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        print(exc)
+        raise_custom_error(500, 510)

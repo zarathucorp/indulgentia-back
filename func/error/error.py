@@ -142,6 +142,8 @@ def raise_custom_error(status_code: int, additional_code: int):
 
             "500": "Payment error",
             "510": "Tosspayments API error",
+            "511": "Tosspayments confirm API error",
+            "512": "Tosspayments webhook API error",
 
             "600": "Github API error",
         },
