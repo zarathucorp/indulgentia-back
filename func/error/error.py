@@ -116,6 +116,7 @@ def raise_custom_error(status_code: int, additional_code: int):
             "200": "Supabase error",
             "210": "Supabase insert error",
             "220": "Supabase update error",
+            "230": "Supabase select error",
             "231": "Supabase single select error",
             "232": "Supabase multiple select error",
             "240": "Supabase delete error",
