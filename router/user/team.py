@@ -136,7 +136,7 @@ def change_team_leader(req: Request, team_id: str, team: ChangeTeamLeaderRequest
 
 
 class TeamInviteRequest(BaseModel):
-    invite_id: str
+    invite_id: UUID4
 
 
 @router.patch("/{team_id}/accept", tags=["team"])
@@ -315,8 +315,8 @@ def get_team_invite_sent_list(req: Request):
     team_id = get_user_team(user)
     if not validate_user_is_leader(user, UUID(team_id)):
         raise_custom_error(401, 520)
-    data, count = supabase.table("team_invite").select(
-        "*").eq("is_deleted", False).is_("is_accepted", "null").eq("team_id", team_id).order("created_at").execute()
+    data, count = supabase.rpc("get_team_invite_send_and_team_and_user_setting", {
+                               "sent_team_id": team_id}).execute()
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1]
@@ -340,10 +340,6 @@ def get_team_invite_single(req: Request, invite_id: str):
         "status": "succeed",
         "data": data[1][0]
     })
-
-
-class TeamInviteRequest(BaseModel):
-    invite_id: UUID4
 
 
 @router.delete("/invite/cancel", tags=["team"])

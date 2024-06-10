@@ -52,6 +52,7 @@ def update_project(project: schemas.ProjectUpdate):
         if (project.get("start_date") is not None and project.get("end_date") is not None) and (project.get("start_date") >= project.get("end_date")):
             raise_custom_error(422, 231)
 
+
         data, count = supabase.table("project").update(
             {**project}).eq("is_deleted", False).eq("id", project["id"]).execute()
         if not data[1]:
