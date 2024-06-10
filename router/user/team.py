@@ -137,7 +137,7 @@ def change_team_leader(req: Request, team_id: str, team: ChangeTeamLeaderRequest
 
 
 class TeamInviteRequest(BaseModel):
-    invite_id: str
+    invite_id: UUID4
 
 
 @router.patch("/{team_id}/accept", tags=["team"])
@@ -351,10 +351,6 @@ def get_team_invite_single(req: Request, invite_id: str):
         "status": "succeed",
         "data": data[1][0]
     })
-
-
-class TeamInviteRequest(BaseModel):
-    invite_id: UUID4
 
 
 @router.delete("/invite/cancel", tags=["team"])
