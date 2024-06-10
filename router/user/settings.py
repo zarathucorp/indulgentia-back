@@ -8,6 +8,7 @@ from func.auth.auth import verify_user
 from cloud.azure.blob_storage import *
 from env import DEFAULT_AZURE_CONTAINER_NAME
 from database import schemas
+from func.error.error import raise_custom_error
 
 router = APIRouter(
     prefix="/settings",
@@ -30,7 +31,7 @@ def allowed_file(filename):
 async def get_signature(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     # # testing user
     # user = UUID("6a423db5-8a34-4153-9795-c6f058020445", version=4)
     blob_name = str(user) + ".png"
@@ -40,7 +41,9 @@ async def get_signature(req: Request):
             blob_name, container_name=SIGNATURE_AZURE_CONTAINER_NAME)
         return JSONResponse(content={"status": "succeed", "url": url})
     except Exception as e:
-        return JSONResponse(status_code=400, content={"status": "failed", "message": str(e)})
+        print(e)
+        raise_custom_error(500, 312)
+        # return JSONResponse(status_code=400, content={"status": "failed", "message": str(e)})
 
 
 # # file upload 방식
@@ -80,7 +83,7 @@ async def get_signature(req: Request):
 async def add_signature(req: Request, signature: schemas.CreateSignature):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
 
     import base64
     from PIL import Image
@@ -95,44 +98,44 @@ async def add_signature(req: Request, signature: schemas.CreateSignature):
         data, count = supabase.table("user_setting").update(
             {"has_signature": True}).eq("id", user).execute()
         if not data[1]:
-            raise HTTPException(
-                status_code=500, detail="Internal Server Error")
+            raise_custom_error(500, 220)
         return JSONResponse(content={
             "status": "succeed",
             "has_signature": data[1][0].get("has_signature"),
         })
     else:
-        return JSONResponse(content={
-            "status": "failed",
-        })
+        raise_custom_error(500, 311)
+        # return JSONResponse(content={
+        #     "status": "failed",
+        # })
 
 
 @router.delete("/signature", tags=["settings"])
 async def drop_signature(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
 
     data, count = supabase.table("user_setting").select(
         "has_signature").eq("id", user).execute()
     if not data[1]:
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise_custom_error(500, 231)
     blob_name = str(user) + ".png"
     res = delete_blob(blob_name)
     if res:
         data, count = supabase.table("user_setting").update(
             {"has_signature": False}).eq("id", user).execute()
         if not data[1]:
-            raise HTTPException(
-                status_code=500, detail="Internal Server Error")
+            raise_custom_error(500, 242)
         return JSONResponse(content={
             "status": "succeed",
             "has_signature": data[1][0].get("has_signature")
         })
     else:
-        return JSONResponse(content={
-            "status": "failed",
-        })
+        raise_custom_error(500, 313)
+        # return JSONResponse(content={
+        #     "status": "failed",
+        # })
 
 
 # user info API
@@ -140,11 +143,11 @@ async def drop_signature(req: Request):
 def get_user_info(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.table("user_setting").select(
         "id", "first_name", "last_name", "email").eq("id", user).execute()
     if not data[1]:
-        raise HTTPException(status_code=400, detail="No data")
+        raise_custom_error(500, 231)
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1][0]
@@ -155,11 +158,11 @@ def get_user_info(req: Request):
 async def update_user_info(req: Request, user_info: schemas.UserUpdate):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.table("user_setting").update(
         {"first_name": user_info.first_name, "last_name": user_info.last_name}).eq("id", user).execute()
     if not data[1]:
-        raise HTTPException(status_code=400, detail="No data")
+        raise_custom_error(500, 220)
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1][0]
@@ -172,11 +175,11 @@ async def update_user_info(req: Request, user_info: schemas.UserUpdate):
 async def drop_user_info(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.table(
         "user_setting").delete().eq("id", user).execute()
     if not data[1]:
-        raise HTTPException(status_code=400, detail="No data")
+        raise_custom_error(500, 242)
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1][0]
@@ -187,11 +190,11 @@ async def drop_user_info(req: Request):
 def get_github_token(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.table("user_setting").select(
         "github_token").eq("id", user).execute()
     if not data[1]:
-        raise HTTPException(status_code=400, detail="No data")
+        raise_custom_error(500, 231)
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1][0]
@@ -206,11 +209,11 @@ class AddGithubToken(BaseModel):
 def change_github_token(req: Request, body: AddGithubToken):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.table("user_setting").update(
         {"github_token": body.token}).eq("id", user).execute()
     if not data[1]:
-        raise HTTPException(status_code=400, detail="No data")
+        raise_custom_error(500, 220)
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1][0]
@@ -221,11 +224,11 @@ def change_github_token(req: Request, body: AddGithubToken):
 def drop_github_token(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.table("user_setting").update(
         {"github_token": None}).eq("id", user).execute()
     if not data[1]:
-        raise HTTPException(status_code=400, detail="No data")
+        raise_custom_error(500, 242)
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1][0]

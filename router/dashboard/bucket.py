@@ -6,6 +6,7 @@ import uuid
 from database import schemas
 from func.dashboard.crud.bucket import *
 from func.auth.auth import *
+from func.error.error import raise_custom_error
 
 
 router = APIRouter(
@@ -20,16 +21,16 @@ router = APIRouter(
 @router.get("/list/{project_id}", tags=["bucket"])
 async def get_bucket_list(req: Request, project_id: str):
     try:
-        test_id = uuid.UUID(project_id)
+        uuid.UUID(project_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.rpc(
         "verify_project", {"user_id": str(user), "project_id": project_id}).execute()
     if not data[1]:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(401, 210)
     res = read_bucket_list(uuid.UUID(project_id))
     return JSONResponse(content={
         "status": "succeed",
@@ -42,15 +43,16 @@ async def get_bucket_list(req: Request, project_id: str):
 @router.get("/{bucket_id}", tags=["bucket"])
 async def get_bucket(req: Request, bucket_id: str):
     try:
-        test_id = uuid.UUID(bucket_id)
+        uuid.UUID(bucket_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.rpc(
         "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     if not data[1]:
+        raise_custom_error(401, 310)
         raise HTTPException(status_code=403, detail="Forbidden")
     res = read_bucket(uuid.UUID(bucket_id))
     return JSONResponse(content={
@@ -66,11 +68,11 @@ async def get_bucket(req: Request, bucket_id: str):
 async def add_bucket(req: Request, bucket: schemas.BucketCreate):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.rpc("verify_project", {"user_id": str(
         user), "project_id": str(bucket.project_id)}).execute()
     if not data[1]:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(401, 210)
     res = create_bucket(bucket)
     return JSONResponse(content={
         "status": "succeed",
@@ -84,9 +86,9 @@ async def add_bucket(req: Request, bucket: schemas.BucketCreate):
 async def change_bucket(req: Request, bucket: schemas.BucketUpdate):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     # if not user == bucket.manager_id:
-        # raise HTTPException(status_code=403, detail="Forbidden")
+        # raise_custom_error(401, 320)
     res = update_bucket(bucket)
     return JSONResponse(content={
         "status": "succeed",
@@ -99,18 +101,18 @@ async def change_bucket(req: Request, bucket: schemas.BucketUpdate):
 @router.delete("/{bucket_id}", tags=["bucket"])
 async def drop_bucket(req: Request, bucket_id: str):
     try:
-        test_id = uuid.UUID(bucket_id)
+        uuid.UUID(bucket_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.table("bucket").select(
         "manager_id").eq("id", bucket_id).execute()
     if not data[1]:
-        raise HTTPException(status_code=400, detail="No data")
+        raise_custom_error(500, 231)
     # if not user == data[1][0]["manager_id"]:
-        # raise HTTPException(status_code=403, detail="Forbidden")
+        # raise_custom_error(401, 320)
     res = flag_is_deleted_bucket(uuid.UUID(bucket_id))
     return JSONResponse(content={
         "status": "succeed",
@@ -141,16 +143,16 @@ async def drop_bucket(req: Request, bucket_id: str):
 @router.get("/{bucket_id}/breadcrumb", tags=["bucket"])
 async def get_breadcrumb(req: Request, bucket_id: str):
     try:
-        test_id = uuid.UUID(bucket_id)
+        uuid.UUID(bucket_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.rpc(
         "bucket_breadcrumb_data", {"bucket_id": bucket_id}).execute()
     if not data[1]:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(500, 250)
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1][0]
@@ -161,12 +163,13 @@ async def get_breadcrumb(req: Request, bucket_id: str):
 async def get_connected_github_repositories(req: Request, bucket_id: str):
     user: UUID4 = verify_user(req)
     if not user:
+        raise_custom_error(403, 213)
         raise HTTPException(status_code=401, detail="Unauthorized")
     data = get_connected_gitrepo(uuid.UUID(bucket_id))
     # data, count = supabase.rpc(
     #     "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     # if not data[1]:
-    #     raise HTTPException(status_code=403, detail="Forbidden")
+    #    raise_custom_error(401, 310)
     return JSONResponse(content={
         "status": "succeed",
         "data": data
@@ -177,7 +180,7 @@ async def get_connected_github_repositories(req: Request, bucket_id: str):
 async def connect_github_repository(req: Request, bucket_id: str, newRepo: schemas.GitrepoCreate):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data = create_connected_gitrepo(newRepo, user)
     return JSONResponse(content={
         "status": "succeed",
@@ -189,7 +192,7 @@ async def connect_github_repository(req: Request, bucket_id: str, newRepo: schem
 async def disconnect_github_repository(req: Request, bucket_id: str, repo_id: str):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data = flag_is_deleted_gitrepo(uuid.UUID(repo_id))
     return JSONResponse(content={
         "status": "succeed",

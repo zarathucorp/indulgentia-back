@@ -8,6 +8,8 @@ import uuid
 from database import supabase, schemas
 from func.auth.auth import *
 from func.dashboard.crud.project import *
+from func.user.team import *
+from func.error.error import raise_custom_error
 
 
 router = APIRouter(
@@ -22,14 +24,14 @@ router = APIRouter(
 @router.get("/list/{team_id}", tags=["project"])
 async def get_project_list(req: Request, team_id: str):
     try:
-        test_id = uuid.UUID(team_id)
+        uuid.UUID(team_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     if not verify_team(user, team_id):
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(401, 510)
     res = read_project_list(team_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -41,14 +43,13 @@ async def get_project_list(req: Request, team_id: str):
 async def get_project_list_by_current_user(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.table("user_setting").select(
         "team_id").eq("id", user).execute()
     if not data[1]:
-        # raise HTTPException(status_code=500, detail="Supabase Error")
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(500, 231)
     if not data[1][0].get("team_id"):
-        raise HTTPException(status_code=401, detail="No team found")
+        raise_custom_error(401, 540)
     else:
         res = read_project_list(data[1][0].get("team_id"))
     return JSONResponse(content={
@@ -62,16 +63,16 @@ async def get_project_list_by_current_user(req: Request):
 @router.get("/{project_id}", tags=["project"])
 async def get_project(req: Request, project_id: str):
     try:
-        test_id = uuid.UUID(project_id)
+        uuid.UUID(project_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.rpc(
         "verify_project", {"user_id": str(user), "project_id": project_id}).execute()
     if not data[1]:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(401, 210)
     res = read_project(project_id)
     return JSONResponse(content={
         "status": "succeed",
@@ -86,9 +87,9 @@ async def get_project(req: Request, project_id: str):
 async def add_project(req: Request, project: schemas.ProjectCreate):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     if not verify_team(user, project.team_id):
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(401, 510)
     res = create_project(project)
     return JSONResponse(content={
         "status": "succeed",
@@ -102,15 +103,14 @@ async def add_project(req: Request, project: schemas.ProjectCreate):
 async def change_project(req: Request, project: schemas.ProjectUpdate):
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.rpc("verify_project", {
                                "user_id": str(user), "project_id": str(project.id)}).execute()
     if not data[1]:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(401, 210)
 
-    # # need verify project_leader?
-    # if not user == project["project_leader"]:  # not working
-        # raise HTTPException(status_code=403, detail="Forbidden")
+    if not validate_user_is_leader(user, project.id):
+        raise_custom_error(401, 520)
 
     res = update_project(project)
     return JSONResponse(content={
@@ -124,20 +124,19 @@ async def change_project(req: Request, project: schemas.ProjectUpdate):
 @router.delete("/{project_id}", tags=["project"])
 async def drop_project(req: Request, project_id: str):
     try:
-        test_id = uuid.UUID(project_id)
+        uuid.UUID(project_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid UUID format")
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise_custom_error(403, 213)
     data, count = supabase.rpc(
         "verify_project", {"user_id": str(user), "project_id": project_id}).execute()
     if not data[1]:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise_custom_error(401, 210)
 
-    # # need verify project_leader?
-    # if not user == project["project_leader"]:  # not working
-        # raise HTTPException(status_code=403, detail="Forbidden")
+    if not validate_user_is_leader(user, project_id):
+        raise_custom_error(401, 520)
 
     res = flag_is_deleted_project(project_id)
     return JSONResponse(content={

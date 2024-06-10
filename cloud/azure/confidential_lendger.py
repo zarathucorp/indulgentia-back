@@ -10,6 +10,9 @@ from azure.confidentialledger.certificate import ConfidentialLedgerCertificateCl
 
 from env import AZURE_CONFIDENTIAL_LEDGER_NAME
 import json
+from func.error.error import raise_custom_error
+
+
 identity_url = "https://identity.confidential-ledger.core.azure.com"
 ledger_url = "https://" + AZURE_CONFIDENTIAL_LEDGER_NAME + \
     ".confidential-ledger.azure.com"
@@ -48,7 +51,7 @@ def write_ledger(content: dict):
         return result
     except Exception as e:
         print(e)
-        raise e
+        raise_custom_error(500, 321)
 
 
 def read_ledger(transaction_id: str):
@@ -75,8 +78,9 @@ def read_ledger(transaction_id: str):
             time_spent += 0.01
 
             if time_spent > 10:
-                raise Exception("Timeout")
+                # raise Exception("Timeout")
+                raise_custom_error(500, 323)
 
     except Exception as e:
         print(e)
-        raise e
+        raise_custom_error(500, 322)
