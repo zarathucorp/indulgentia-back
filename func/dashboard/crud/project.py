@@ -56,7 +56,7 @@ def update_project(project: schemas.ProjectUpdate):
     try:
         project = project.model_dump(mode="json")
 
-        if project.get("start_date") >= project.get("end_date"):
+        if (project.get("start_date") is not None and project.get("end_date") is not None) and (project.get("start_date") >= project.get("end_date")):
             raise HTTPException(
                 status_code=400, detail="Start date should be earlier than end date")
 
