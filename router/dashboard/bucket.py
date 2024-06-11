@@ -164,7 +164,7 @@ async def get_connected_github_repositories(req: Request, bucket_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        # raise HTTPException(status_code=401, detail="Unauthorized")
     data = get_connected_gitrepo(uuid.UUID(bucket_id))
     # data, count = supabase.rpc(
     #     "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
