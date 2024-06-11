@@ -77,6 +77,7 @@ def validate_user_is_leader(user_id: UUID4, team_id: UUID4):
         data, count = supabase.table(
             "team").select("team_leader_id").eq("is_deleted", False).eq("id", team_id).execute()
         if not data[1]:
+            print(data[1])
             return False
         if data[1][0].get('team_leader_id', None) != str(user_id):
             return False
