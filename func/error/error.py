@@ -37,6 +37,7 @@ def raise_custom_error(status_code: int, additional_code: int):
             "100": "Unauthorized user access to User Database",
             "110": "Access to auth.users denied",
             "120": "Access to public.user_setting denied",
+            "121": "User name is not found",
 
             "200": "Unauthorized user access to Project",
             "210": "User is not in this project",
