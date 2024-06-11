@@ -163,4 +163,5 @@ def raise_custom_error(status_code: int, additional_code: int):
     else:
         res = custom_status_code_string + "000" + " Unknown error"
 
+    print(res)
     raise HTTPException(status_code=status_code, detail=res)

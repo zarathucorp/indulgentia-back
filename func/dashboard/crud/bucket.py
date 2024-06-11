@@ -85,8 +85,6 @@ def get_connected_gitrepo(bucket_id: UUID4):
     try:
         data, count = supabase.table("gitrepo").select(
             "*").eq("is_deleted", False).eq("bucket_id", bucket_id).execute()
-        if not data[1]:
-            raise_custom_error(500, 231)
         return data[1]
     except Exception as e:
         print(e)
