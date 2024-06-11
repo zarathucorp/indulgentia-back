@@ -94,7 +94,7 @@ async def add_note(req: Request,
     first_name = user_data[1][0].get("first_name")
     last_name = user_data[1][0].get("last_name")
     if not first_name or not last_name:
-        raise_custom_error(500, 121)
+        raise_custom_error(401, 121)
     username = first_name + " " + last_name
     try:
         contents = []
