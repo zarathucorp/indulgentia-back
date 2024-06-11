@@ -108,8 +108,8 @@ async def change_project(req: Request, project: schemas.ProjectUpdate):
                                "user_id": str(user), "project_id": str(project.id)}).execute()
     if not data[1]:
         raise_custom_error(401, 210)
-
-    if not validate_user_is_leader(user, project.id):
+    team_id = uuid.UUID(get_user_team(user))
+    if not validate_user_is_leader(user, team_id):
         raise_custom_error(401, 520)
 
     res = update_project(project)
