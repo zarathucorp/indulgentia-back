@@ -61,7 +61,7 @@ async def get_note(req: Request, note_id: str):
     # data, count = supabase.rpc(
     #     "verify_note", {"user_id": user, "note_id": note_id}).execute()
     data, count = supabase.rpc(
-        "verify_note2", {"p_user_id": user, "p_note_id": note_id}).execute()
+        "verify_note", {"p_user_id": user, "p_note_id": note_id}).execute()
     if not data[1]:
         raise_custom_error(401, 410)
     res = read_note_detail(note_id)
