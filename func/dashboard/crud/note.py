@@ -28,6 +28,19 @@ def read_note(note_id: UUID4):
         return data[1][0]
     except Exception as e:
         print(e)
+        raise_custom_error(500, 230)\
+
+
+
+def read_note_detail(note_id: UUID4):
+    try:
+        data, count = supabase.rpc(
+            "get_note_details", {"p_note_id": str(note_id)}).execute()
+        if not data[1]:
+            raise_custom_error(500, 231)
+        return data[1][0]
+    except Exception as e:
+        print(e)
         raise_custom_error(500, 230)
 
 

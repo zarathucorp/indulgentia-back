@@ -57,11 +57,14 @@ async def get_note(req: Request, note_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    # print(user)
+    # data, count = supabase.rpc(
+    #     "verify_note", {"user_id": user, "note_id": note_id}).execute()
     data, count = supabase.rpc(
-        "verify_note", {"user_id": user, "note_id": note_id}).execute()
+        "verify_note2", {"p_user_id": user, "p_note_id": note_id}).execute()
     if not data[1]:
         raise_custom_error(401, 410)
-    res = read_note(note_id)
+    res = read_note_detail(note_id)
     return JSONResponse(content={
         "status": "succeed",
         "data": res
