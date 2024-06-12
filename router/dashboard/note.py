@@ -115,8 +115,8 @@ async def add_note(req: Request,
         "bucket_breadcrumb_data", {"bucket_id": str(bucket_id)}).execute()
     if not breadcrumb_data[1]:
         raise_custom_error(500, 250)
-    pdf_res = generate_pdf(title=title, username=username,
-                           note_id=str(note_id), description=description, files=files, contents=contents, project_title=breadcrumb_data[1][0].get("project_title"), bucket_title=breadcrumb_data[1][0].get("bucket_title"), signature_url=url)
+    pdf_res = await generate_pdf(title=title, username=username,
+                                 note_id=str(note_id), description=description, files=files, contents=contents, project_title=breadcrumb_data[1][0].get("project_title"), bucket_title=breadcrumb_data[1][0].get("bucket_title"), signature_url=url)
     await sign_pdf(pdf_res)
     signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id}_signed.pdf"
     try:
@@ -125,6 +125,11 @@ async def add_note(req: Request,
             pdf_data = f.read()
     except Exception as e:
         print(e)
+        # delete result pdf
+        SOURCE_PATH = "func/dashboard/pdf_generator"
+        if os.path.isfile(f"{SOURCE_PATH}/output/{note_id}.pdf"):
+            os.unlink(f"{SOURCE_PATH}/output/{note_id}.pdf")
+            print(f"{SOURCE_PATH}/output/{note_id}.pdf deleted")
         raise_custom_error(500, 120)
     upload_blob(pdf_data, str(note_id) + ".pdf")
     ledger_result = write_ledger(
@@ -161,7 +166,7 @@ async def add_note(req: Request,
 # update
 
 
-@router.put("/{note_id}", tags=["note"])
+@ router.put("/{note_id}", tags=["note"])
 async def change_note(req: Request, note: schemas.NoteUpdate):
     user: UUID4 = verify_user(req)
     if not user:
@@ -180,7 +185,7 @@ async def change_note(req: Request, note: schemas.NoteUpdate):
 # delete
 
 
-@router.delete("/{note_id}", tags=["note"])
+@ router.delete("/{note_id}", tags=["note"])
 async def drop_note(req: Request, note_id: str):
     try:
         uuid.UUID(note_id)
@@ -221,7 +226,7 @@ async def drop_note(req: Request, note_id: str):
 """
 
 
-@router.get("/file/{note_id}", tags=["note"])
+@ router.get("/file/{note_id}", tags=["note"])
 async def get_note_file(req: Request, note_id: str):
     # Auth 먼저 해야함
     user: UUID4 = verify_user(req)
@@ -237,7 +242,7 @@ async def get_note_file(req: Request, note_id: str):
         # return JSONResponse(status_code=400, content={"status": "failed", "message": str(e)})
 
 
-@router.get("/{note_id}/breadcrumb", tags=["note"])
+@ router.get("/{note_id}/breadcrumb", tags=["note"])
 async def get_breadcrumb(req: Request, note_id: str):
     try:
         uuid.UUID(note_id)
@@ -256,7 +261,7 @@ async def get_breadcrumb(req: Request, note_id: str):
     })
 
 
-@router.get("/{note_id}/timestamp", tags=["note"])
+@ router.get("/{note_id}/timestamp", tags=["note"])
 def get_note_timestamp(req: Request, note_id: str):
     try:
         uuid.UUID(note_id)
