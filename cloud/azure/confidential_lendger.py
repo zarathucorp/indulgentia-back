@@ -45,6 +45,7 @@ def write_ledger(content: dict):
     @param content: content to be written to the ledger
     -> timestamp 자동으로 생성됨. 따로 넣어 줄 필요 없음.
     '''
+    print(AZURE_CONFIDENTIAL_LEDGER_NAME)
     entry = {"contents": json.dumps({**content, "timestamp": time.time()})}
     try:
         result = ledger_client.create_ledger_entry(entry=entry)

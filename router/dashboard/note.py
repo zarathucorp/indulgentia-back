@@ -125,6 +125,11 @@ async def add_note(req: Request,
             pdf_data = f.read()
     except Exception as e:
         print(e)
+        # delete result pdf
+        SOURCE_PATH = "func/dashboard/pdf_generator"
+        if os.path.isfile(f"{SOURCE_PATH}/output/{note_id}.pdf"):
+            os.unlink(f"{SOURCE_PATH}/output/{note_id}.pdf")
+            print(f"{SOURCE_PATH}/output/{note_id}.pdf deleted")
         raise_custom_error(500, 120)
     upload_blob(pdf_data, str(note_id) + ".pdf")
     ledger_result = write_ledger(
