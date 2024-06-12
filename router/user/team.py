@@ -143,7 +143,7 @@ class TeamInviteRequest(BaseModel):
 def accept_team_invite(req: Request, team_id: str, invite: TeamInviteRequest):
     try:
         UUID(team_id)
-        UUID(invite.invite_id)
+        # UUID(invite.invite_id)
     except ValueError:
         raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
@@ -152,7 +152,7 @@ def accept_team_invite(req: Request, team_id: str, invite: TeamInviteRequest):
     if not validate_user_free(user):
         raise_custom_error(401, 530)
 
-    is_invite_accepted = validate_invite_accepted(UUID(invite.invite_id))
+    is_invite_accepted = validate_invite_accepted(invite.invite_id)
     if is_invite_accepted == False:
         invite_data, count = supabase.table("team_invite").update({"is_deleted": True}).eq(
             "id", invite.invite_id).execute()
@@ -181,7 +181,7 @@ def accept_team_invite(req: Request, team_id: str, invite: TeamInviteRequest):
 def reject_team_invite(req: Request, team_id: str, invite: TeamInviteRequest):
     try:
         UUID(team_id)
-        UUID(invite.invite_id)
+        # UUID(invite.invite_id)
     except ValueError:
         raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
@@ -190,7 +190,7 @@ def reject_team_invite(req: Request, team_id: str, invite: TeamInviteRequest):
     # if not validate_user_free(user):
     #     raise_custom_error(401, 530)
 
-    is_invite_accepted = validate_invite_accepted(UUID(invite.invite_id))
+    is_invite_accepted = validate_invite_accepted(invite.invite_id)
     if is_invite_accepted == False:
         invite_data, count = supabase.table("team_invite").update({"is_deleted": True}).eq(
             "id", invite.invite_id).execute()
