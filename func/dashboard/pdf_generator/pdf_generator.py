@@ -11,9 +11,10 @@ import shutil
 import subprocess
 import re
 import asyncio
+import aiofiles
 from func.error.error import raise_custom_error
 
-
+import time
 # def generate_pdf(user_id:str, files=List[UploadFile], descriptions=List[str]):
 #     class PDF(FPDF):
 #         def header(self):
@@ -82,6 +83,8 @@ from func.error.error import raise_custom_error
 #     return res
 
 # MS office & HWP to PDF
+
+
 def convert_doc_to_pdf(source_path: str, file_name: str, extension: str):
     try:
         subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf",
@@ -240,14 +243,16 @@ async def generate_pdf(title: str, username: str, note_id: str, description: str
     create_intro_page(title, username, description,
                       SOURCE_PATH, note_id, project_title, bucket_title, signature_url)
 
-    async def process_file(file, idx):
+    async def process_file(file: UploadFile, idx: int, note_id: str, contents: List[Union[bytes, None]], SOURCE_PATH: str):
         extension = file.filename.split(".")[-1]
         filename = f"{note_id}_{idx}"
         try:
-            with open(f"{SOURCE_PATH}/input/{filename}.{extension}", 'wb') as f:
-                f.write(contents[idx])
+            # 비동기 파일 처리
+            async with aiofiles.open(f"{SOURCE_PATH}/input/{filename}.{extension}", 'wb') as f:
+                await f.write(contents[idx])
                 print(f"{SOURCE_PATH}/input/{filename}.{extension} saved")
 
+            # PIL은 비동기 지원 안됨
             if extension in DOC_EXTENSIONS:
                 res = convert_doc_to_pdf(SOURCE_PATH, filename, extension)
                 print(f"{SOURCE_PATH}/output/{res} saved")
@@ -257,17 +262,16 @@ async def generate_pdf(title: str, username: str, note_id: str, description: str
                 image.thumbnail(A4_SIZE)
                 if image.mode == "RGBA":
                     image.load()
-                    background = Image.new(
-                        "RGB", image.size, (255, 255, 255))
+                    background = Image.new("RGB", image.size, (255, 255, 255))
                     background.paste(image, mask=image.split()[3])
                     background.save(f"{SOURCE_PATH}/output/{filename}.pdf")
                 else:
                     image.save(f"{SOURCE_PATH}/output/{filename}.pdf")
                 print(f"{SOURCE_PATH}/output/{filename}.pdf saved")
             else:
-                # pdf file
-                with open(f"{SOURCE_PATH}/output/{filename}.{extension}", 'wb') as f:
-                    f.write(contents[idx])
+                # Copy PDF file asynchronously
+                async with aiofiles.open(f"{SOURCE_PATH}/output/{filename}.{extension}", 'wb') as f:
+                    await f.write(contents[idx])
                     print(f"{SOURCE_PATH}/output/{filename}.pdf saved")
         except FileNotFoundError as e:
             print(e)
@@ -292,27 +296,30 @@ async def generate_pdf(title: str, username: str, note_id: str, description: str
 
     if files:
         if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
-            raise HTTPException(
-                status_code=422, detail="Unprocessable file extension")
+            raise_custom_error(422, 240)
 
-        tasks = [process_file(file, idx) for idx, file in enumerate(files)]
+        # 소요시간 측정
+        # start = time.time()
+        # print("start time", start)
+        tasks = [process_file(file, idx, note_id, contents, SOURCE_PATH)
+                 for idx, file in enumerate(files)]
         await asyncio.gather(*tasks)
+        # end = time.time()
+        # print("end_time", end)
+        # print("time elapsed", end - start)
 
     # merge pdfs
     try:
         pdfs = [f"{SOURCE_PATH}/output/{note_id}_intro.pdf"]
         if files:
-            pdfs = pdfs + \
-                [f"{SOURCE_PATH}/output/{note_id}_{idx}.pdf" for idx in range(
-                    len(files))]
+            pdfs += [
+                f"{SOURCE_PATH}/output/{note_id}_{idx}.pdf" for idx in range(len(files))]
         print(pdfs)
         pdfmerge(pdfs, f"{SOURCE_PATH}/output/{note_id}.pdf")
         print(f"{SOURCE_PATH}/output/{note_id}.pdf saved")
     except Exception as e:
         print(e)
         raise_custom_error(500, 440)
-        raise HTTPException(
-            status_code=500, detail="Failed to merge pdfs")
 
     # delete files
     try:
@@ -337,5 +344,121 @@ async def generate_pdf(title: str, username: str, note_id: str, description: str
 
     return f"{SOURCE_PATH}/output/{note_id}"
 
-# # testing
-# convert_doc_to_pdf("func/dashboard/pdf_generator", "3d4256d9-20e8-4acc-9c51-42c90b4456ab_0", "docx")
+# async def generate_pdf(title: str, username: str, note_id: str, description: str | None, files: List[Union[UploadFile, None]], contents: List[Union[bytes, None]], project_title: str, bucket_title: str, signature_url: str | None = None):
+#     SOURCE_PATH = "func/dashboard/pdf_generator"
+#     DOC_EXTENSIONS = ["doc", "docx", "hwp",
+#                       "hwpx", "ppt", "pptx", "xls", "xlsx"]
+#     IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "bmp"]
+#     AVAILABLE_EXTENSIONS = DOC_EXTENSIONS + IMAGE_EXTENSIONS + ["pdf"]
+#     A4_SIZE = (595, 842)
+
+#     # Intro PDF
+#     print(description)
+#     print(files)
+#     create_intro_page(title, username, description,
+#                       SOURCE_PATH, note_id, project_title, bucket_title, signature_url)
+
+#     async def process_file(file, idx):
+#         extension = file.filename.split(".")[-1]
+#         filename = f"{note_id}_{idx}"
+#         try:
+#             with open(f"{SOURCE_PATH}/input/{filename}.{extension}", 'wb') as f:
+#                 f.write(contents[idx])
+#                 print(f"{SOURCE_PATH}/input/{filename}.{extension} saved")
+
+#             if extension in DOC_EXTENSIONS:
+#                 res = convert_doc_to_pdf(SOURCE_PATH, filename, extension)
+#                 print(f"{SOURCE_PATH}/output/{res} saved")
+#             elif extension in IMAGE_EXTENSIONS:
+#                 image = Image.open(
+#                     f"{SOURCE_PATH}/input/{filename}.{extension}")
+#                 image.thumbnail(A4_SIZE)
+#                 if image.mode == "RGBA":
+#                     image.load()
+#                     background = Image.new(
+#                         "RGB", image.size, (255, 255, 255))
+#                     background.paste(image, mask=image.split()[3])
+#                     background.save(f"{SOURCE_PATH}/output/{filename}.pdf")
+#                 else:
+#                     image.save(f"{SOURCE_PATH}/output/{filename}.pdf")
+#                 print(f"{SOURCE_PATH}/output/{filename}.pdf saved")
+#             else:
+#                 # pdf file
+#                 with open(f"{SOURCE_PATH}/output/{filename}.{extension}", 'wb') as f:
+#                     f.write(contents[idx])
+#                     print(f"{SOURCE_PATH}/output/{filename}.pdf saved")
+#         except FileNotFoundError as e:
+#             print(e)
+#             # 이미지 pdf 없음
+#             raise_custom_error(500, 430)
+#         except ValueError as e:
+#             print(e)
+#             # 이미지 pdf 변환 오류
+#             raise_custom_error(500, 430)
+#         except UnidentifiedImageError as e:
+#             print(e)
+#             # PIL 범용 에러
+#             raise_custom_error(500, 430)
+#         except OSError as e:
+#             print(e)
+#             # file 읽기/쓰기 오류
+#             raise_custom_error(500, 110)
+#         except Exception as e:
+#             print(e)
+#             # 그외 에러
+#             raise_custom_error(500, 400)
+
+#     if files:
+#         if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
+#             raise HTTPException(
+#                 status_code=422, detail="Unprocessable file extension")
+#         import time
+#         start = time.time()
+#         print("start time", start)
+#         tasks = [process_file(file, idx) for idx, file in enumerate(files)]
+#         await asyncio.gather(*tasks)
+#         end = time.time()
+#         print("end_time", end)
+#         print("time elapsed", end-start)
+
+#     # merge pdfs
+#     try:
+#         pdfs = [f"{SOURCE_PATH}/output/{note_id}_intro.pdf"]
+#         if files:
+#             pdfs = pdfs + \
+#                 [f"{SOURCE_PATH}/output/{note_id}_{idx}.pdf" for idx in range(
+#                     len(files))]
+#         print(pdfs)
+#         pdfmerge(pdfs, f"{SOURCE_PATH}/output/{note_id}.pdf")
+#         print(f"{SOURCE_PATH}/output/{note_id}.pdf saved")
+#     except Exception as e:
+#         print(e)
+#         raise_custom_error(500, 440)
+#         raise HTTPException(
+#             status_code=500, detail="Failed to merge pdfs")
+
+#     # delete files
+#     try:
+#         os.unlink(f"{SOURCE_PATH}/output/{note_id}_intro.pdf")
+#         print(f"{SOURCE_PATH}/output/{note_id}_intro.pdf deleted")
+#         if files:
+#             for idx, file in enumerate(files):
+#                 file_input_path = os.path.join(
+#                     SOURCE_PATH + "/input/", f"{note_id}_{idx}.{file.filename.split('.')[-1]}")
+#                 file_output_path = os.path.join(
+#                     SOURCE_PATH + "/output/", f"{note_id}_{idx}.pdf")
+#                 if os.path.isfile(file_input_path):
+#                     os.unlink(file_input_path)
+#                     print(f"{file_input_path} deleted")
+#                 if os.path.isfile(file_output_path):
+#                     os.unlink(file_output_path)
+#                     print(f"{file_output_path} deleted")
+#     except Exception as e:
+#         print(e)
+#         raise_custom_error(500, 130)
+#     print("Success!")
+
+#     return f"{SOURCE_PATH}/output/{note_id}"
+
+# # # testing
+# # convert_doc_to_pdf("func/dashboard/pdf_generator", "3d4256d9-20e8-4acc-9c51-42c90b4456ab_0", "docx")
