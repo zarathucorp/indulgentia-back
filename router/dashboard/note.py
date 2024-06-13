@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 from pydantic import UUID4
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Annotated, Literal
 import os
 import uuid
 import hashlib
@@ -11,7 +11,7 @@ from cloud.azure.blob_storage import *
 from database import schemas
 from func.dashboard.crud.note import *
 from func.auth.auth import *
-from func.dashboard.pdf_generator.pdf_generator import generate_pdf
+from func.dashboard.pdf_generator.pdf_generator import generate_pdf, generate_pdf_using_markdown
 from func.note_handling.pdf_sign import sign_pdf
 from cloud.azure.confidential_lendger import write_ledger, read_ledger
 from func.error.error import raise_custom_error
@@ -283,4 +283,88 @@ def get_note_timestamp(req: Request, note_id: str):
     return JSONResponse(content={
         "status": "succeed",
         "data": entry
+    })
+
+
+class RepositoryInfo(BaseModel):
+    owner: str  # username
+    name: str  # repository name
+    url: str
+    full_name: str  # owner/name == full_name 입니다.
+
+
+class GithubMarkdownRequest(BaseModel):
+    markdownContent: str
+    eventType: Literal["Commit", "PR", "Issue"]
+    respositoryInfo: RepositoryInfo
+
+
+@ router.post("/github", tags=["note"])
+async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownRequest):
+    # user: UUID4 = verify_user(req)
+    # if not user:
+    #     raise_custom_error(403, 213)
+    data, count = supabase.table("gitrepo").select("*").ilike("git_username", GithubMarkdownRequest.respositoryInfo.owner).ilike(
+        "git_repository", GithubMarkdownRequest.respositoryInfo.name).eq("is_deleted", False).execute()
+    if not data[1]:
+        raise_custom_error(500, 232)
+
+    res_list = []
+    for idx, row in enumerate(data[1]):
+        note_id = uuid.uuid4()
+        note_id_string = str(note_id)
+        user_data, count = supabase.table("user_setting").select(
+            "*").eq("id", row.get("user_id")).execute()
+        has_signature = user_data[1][0].get("has_signature")
+        if has_signature:
+            url = generate_presigned_url(
+                str(user_data[1][0].get("id")) + ".png")
+
+        first_name = user_data[1][0].get("first_name")
+        last_name = user_data[1][0].get("last_name")
+        if not first_name or not last_name:
+            # raise_custom_error(401, 121)
+            username = "No Name"
+        else:
+            username = first_name + " " + last_name
+
+        pdf_res = await generate_pdf_using_markdown(note_id=note_id_string, markdown_content=GithubMarkdownRequest.markdownContent, project_title=row.get(
+            "git_repository"), bucket_title=row.get("git_repository"), author=username, signature_url=url)
+        await sign_pdf(pdf_res)
+        signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id_string}_signed.pdf"
+        try:
+            # upload pdf
+            with open(signed_pdf_res, "rb") as f:
+                pdf_data = f.read()
+        except Exception as e:
+            print(e)
+            # delete result pdf
+            SOURCE_PATH = "func/dashboard/pdf_generator"
+            if os.path.isfile(f"{SOURCE_PATH}/output/{note_id_string}.pdf"):
+                os.unlink(f"{SOURCE_PATH}/output/{note_id_string}.pdf")
+                print(f"{SOURCE_PATH}/output/{note_id_string}.pdf deleted")
+            raise_custom_error(500, 120)
+        # raise Exception("test")
+        upload_blob(pdf_data, note_id_string + ".pdf")
+        ledger_result = write_ledger(
+            {"id": note_id_string, "hash": hashlib.sha256(pdf_data).hexdigest()})
+        transaction_id = ledger_result.get("transactionId")
+
+        current_time = datetime.now()
+        note = schemas.NoteCreate(
+            id=note_id,
+            bucket_id=uuid.UUID(row.get("bucket_id")),
+            user_id=uuid.UUID(row.get("user_id")),
+            title=f"{current_time}에 생성된 {GithubMarkdownRequest.eventType} 노트(Github)",
+            timestamp_transaction_id=transaction_id,
+            file_name=f"{current_time}에 생성된 {GithubMarkdownRequest.eventType} 노트(Github)",
+            is_github=True,
+            github_type=GithubMarkdownRequest.eventType,
+            github_link=GithubMarkdownRequest.respositoryInfo.url
+        )
+        res = create_note(note)
+        res_list.append(res)
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": res_list
     })
