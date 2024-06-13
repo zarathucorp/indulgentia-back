@@ -296,8 +296,7 @@ async def generate_pdf(title: str, username: str, note_id: str, description: str
 
     if files:
         if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
-            raise HTTPException(
-                status_code=422, detail="Unprocessable file extension")
+            raise_custom_error(422, 240)
 
         # 소요시간 측정
         # start = time.time()
@@ -321,7 +320,6 @@ async def generate_pdf(title: str, username: str, note_id: str, description: str
     except Exception as e:
         print(e)
         raise_custom_error(500, 440)
-        raise HTTPException(status_code=500, detail="Failed to merge pdfs")
 
     # delete files
     try:
