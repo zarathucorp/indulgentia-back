@@ -295,8 +295,9 @@ class RepositoryInfo(BaseModel):
 
 class GithubMarkdownRequest(BaseModel):
     markdownContent: str
+    # eventType: Literal["Commit", "PR", "Issue"]
     eventType: Literal["Commit", "PR", "Issue"]
-    respositoryInfo: RepositoryInfo
+    repositoryInfo: RepositoryInfo
 
 
 @ router.post("/github", tags=["note"])
@@ -304,8 +305,8 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
     # user: UUID4 = verify_user(req)
     # if not user:
     #     raise_custom_error(403, 213)
-    data, count = supabase.table("gitrepo").select("*").ilike("git_username", GithubMarkdownRequest.respositoryInfo.owner).ilike(
-        "git_repository", GithubMarkdownRequest.respositoryInfo.name).eq("is_deleted", False).execute()
+    data, count = supabase.table("gitrepo").select("*").ilike("git_username", GithubMarkdownRequest.repositoryInfo.owner).ilike(
+        "git_repository", GithubMarkdownRequest.repositoryInfo.name).eq("is_deleted", False).execute()
     if not data[1]:
         raise_custom_error(500, 232)
 
@@ -323,13 +324,17 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
         first_name = user_data[1][0].get("first_name")
         last_name = user_data[1][0].get("last_name")
         if not first_name or not last_name:
-            # raise_custom_error(401, 121)
-            username = "No Name"
+            raise_custom_error(401, 121)
+            # username = "No Name"
         else:
-            username = first_name + " " + last_name
+            username = last_name + " " + first_name
 
-        pdf_res = await generate_pdf_using_markdown(note_id=note_id_string, markdown_content=GithubMarkdownRequest.markdownContent, project_title=row.get(
-            "git_repository"), bucket_title=row.get("git_repository"), author=username, signature_url=url)
+        breadcrumb_data, count = supabase.rpc(
+            "bucket_breadcrumb_data", {"bucket_id": row.get("bucket_id")}).execute()
+        if not breadcrumb_data[1]:
+            raise_custom_error(500, 250)
+
+        pdf_res = await generate_pdf_using_markdown(note_id=note_id_string, markdown_content=GithubMarkdownRequest.markdownContent, project_title=breadcrumb_data[1][0].get("project_title"), bucket_title=breadcrumb_data[1][0].get("bucket_title"), author=username, signature_url=url)
         await sign_pdf(pdf_res)
         signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id_string}_signed.pdf"
         try:
@@ -360,7 +365,7 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
             file_name=f"{current_time}에 생성된 {GithubMarkdownRequest.eventType} 노트(Github)",
             is_github=True,
             github_type=GithubMarkdownRequest.eventType,
-            github_link=GithubMarkdownRequest.respositoryInfo.url
+            github_link=GithubMarkdownRequest.repositoryInfo.url
         )
         res = create_note(note)
         res_list.append(res)

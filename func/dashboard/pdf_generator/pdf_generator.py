@@ -347,6 +347,8 @@ async def generate_pdf(title: str, username: str, note_id: str, description: str
 
 async def generate_pdf_using_markdown(note_id: str, markdown_content: str, project_title: str, bucket_title: str, author: str, signature_url: str | None = None):
     from datetime import datetime
+    from fpdf import HTMLMixin
+    from markdown import markdown
     SOURCE_PATH = "func/dashboard/pdf_generator"
 
     try:
@@ -359,8 +361,13 @@ async def generate_pdf_using_markdown(note_id: str, markdown_content: str, proje
 
         pdf.add_font("Pretendard", style="",
                      fname=f"{SOURCE_PATH}/Pretendard-Regular.ttf")
-        pdf.set_font("Pretendard", size=12)
-        pdf.cell(text=markdown_content, markdown=True)
+        pdf.add_font("Pretendard", style="B",
+                     fname=f"{SOURCE_PATH}/Pretendard-Bold.ttf")
+        pdf.set_font("Pretendard", size=18)
+
+        html = markdown(markdown_content)
+        # pdf.multi_cell(w=200, text=markdown_content, markdown=True)
+        pdf.write_html(html)
 
         pdf.set_font_size(10)
         pdf.set_y(pdf.h - 50)
