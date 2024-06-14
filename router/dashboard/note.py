@@ -100,7 +100,7 @@ async def add_note(req: Request,
     last_name = user_data[1][0].get("last_name")
     if not first_name or not last_name:
         raise_custom_error(401, 121)
-    username = first_name + " " + last_name
+    username = last_name + " " + first_name
     try:
         contents = []
         if files:
