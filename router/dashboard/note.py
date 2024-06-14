@@ -143,12 +143,10 @@ async def add_note(req: Request,
     try:
         # delete result pdf
         SOURCE_PATH = "func/dashboard/pdf_generator"
-        if os.path.isfile(f"{SOURCE_PATH}/output/{note_id}.pdf"):
-            os.unlink(f"{SOURCE_PATH}/output/{note_id}.pdf")
-            print(f"{SOURCE_PATH}/output/{note_id}.pdf deleted")
-        if os.path.isfile(f"{SOURCE_PATH}/output/{note_id}_signed.pdf"):
-            os.unlink(f"{SOURCE_PATH}/output/{note_id}_signed.pdf")
-            print(f"{SOURCE_PATH}/output/{note_id}_signed.pdf deleted")
+        os.unlink(f"{SOURCE_PATH}/output/{note_id}.pdf")
+        print(f"{SOURCE_PATH}/output/{note_id}.pdf deleted")
+        os.unlink(f"{SOURCE_PATH}/output/{note_id}_signed.pdf")
+        print(f"{SOURCE_PATH}/output/{note_id}_signed.pdf deleted")
     except Exception as e:
         print(e)
         raise_custom_error(500, 130)
