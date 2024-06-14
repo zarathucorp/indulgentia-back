@@ -337,7 +337,6 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
             raise_custom_error(500, 250)
 
         pdf_res = await generate_pdf_using_markdown(note_id=note_id_string, markdown_content=GithubMarkdownRequest.markdownContent, project_title=breadcrumb_data[1][0].get("project_title"), bucket_title=breadcrumb_data[1][0].get("bucket_title"), author=username, signature_url=url)
-        raise Exception("test")
         await sign_pdf(pdf_res)
         signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id_string}_signed.pdf"
         SOURCE_PATH = "func/dashboard/pdf_generator"
