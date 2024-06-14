@@ -7,6 +7,7 @@ import uuid
 import hashlib
 import asyncio
 from datetime import datetime
+from pytz import timezone
 
 from cloud.azure.blob_storage import *
 from database import schemas
@@ -356,7 +357,8 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
             {"id": note_id_string, "hash": hashlib.sha256(pdf_data).hexdigest()})
         transaction_id = ledger_result.get("transactionId")
 
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        current_time = datetime.now(
+            timezone('Asia/Seoul')).strftime("%Y-%m-%d %H:%M:%S")
         note = schemas.NoteCreate(
             id=note_id,
             bucket_id=uuid.UUID(row.get("bucket_id")),
