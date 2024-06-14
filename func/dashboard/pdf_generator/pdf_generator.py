@@ -1,6 +1,6 @@
 from PIL import Image, UnidentifiedImageError
 from pdfmerge import pdfmerge
-from fpdf import FPDF
+from fpdf import FPDF, FontFace
 import io
 from pydantic import UUID4, BaseModel
 from fastapi import HTTPException, UploadFile, File
@@ -341,6 +341,125 @@ async def generate_pdf(title: str, username: str, note_id: str, description: str
         print(e)
         raise_custom_error(500, 130)
     print("Success!")
+
+    return f"{SOURCE_PATH}/output/{note_id}"
+
+
+async def generate_pdf_using_markdown(note_id: str, markdown_content: str, project_title: str, bucket_title: str, author: str, signature_url: str | None = None):
+    from datetime import datetime
+    from fpdf import HTMLMixin
+    from markdown import markdown
+    SOURCE_PATH = "func/dashboard/pdf_generator"
+
+    try:
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=5)
+
+        date = datetime.now().strftime("%Y-%m-%d")
+        date_kor = datetime.now().strftime("%Y년 %m월 %d일")
+        pdf.add_page()
+
+        pdf.add_font("Pretendard", style="",
+                     fname=f"{SOURCE_PATH}/Pretendard-Regular.ttf")
+        pdf.add_font("Pretendard", style="B",
+                     fname=f"{SOURCE_PATH}/Pretendard-Bold.ttf")
+        pdf.add_font("PretendardB", style="",
+                     fname=f"{SOURCE_PATH}/Pretendard-Bold.ttf")
+        pdf.set_font("Pretendard", size=16)
+
+        html = markdown(markdown_content)
+        # pdf.multi_cell(w=200, text=markdown_content, markdown=True)
+        print(html)
+        pdf.write_html(html, tag_styles={
+            "h1": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=24),
+            "h2": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=20),
+            "a": FontFace(family="Pretendard", color=(0, 0, 255), emphasis=None),
+        }, li_prefix_color=(0, 0, 0), ul_bullet_char=u"\u2022")
+
+        pdf.set_font_size(10)
+        pdf.set_y(pdf.h - 50)
+        pdf.cell(
+            190, 10, text=f"※ 본 문서는 {date_kor}에 작성되었으며 이후 수정되지 않았습니다. 이 문서의 내용은 변조 불가능한 블록체인에 기록되어 있습니다.", ln=0, align='R')
+
+        # project_title = "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+        # project_title = "대통령은 제3항과 제4항의 사유를 지체없이 공포하여야 한다. 선거에 있어서 최고득표자가 2인 이상인 때에는 국회의 재적의원 과반수가 출석한 공개회의에서 다수표를 얻은 자를 당선자로 한다. 국무총리는 국회의 동의를 얻어 대통령이 임명한다. 모든 국민은 신체의 자유를 가진다. 누구든지 법률에 의하지 아니하고는 체포·구속·압수·수색 또는 심문을 받지 아니하며, 법률과 적법한 절차에 의하지 아니하고는 처벌·보안처분 또는 강제노역을 받지 아니한다. 국회의 회의는 공개한다. 다만, 출석의원 과반수의 찬성이 있거나 의장이 국가의 안전보장을 위하여 필요하다고 인정할 때에는 공개하지 아니할 수 있다."
+        # Footer
+        pdf.set_font_size(12)
+        pdf.set_y(pdf.h - 40)
+        pdf.line(0, pdf.get_y(), pdf.w, pdf.get_y())
+        pdf.set_y(pdf.get_y() + 5)
+        pdf.set_x(35)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(15, 10, text="Project: ", ln=0, align='L', border="B")
+
+        pdf.set_font_size(12)
+        pdf.set_text_color(70, 70, 70)
+        lines = split_text(project_title, 89, pdf)
+        if len(lines) == 1:
+            pdf.cell(90, 10, text=f"{project_title}",
+                     ln=True, align='L', border="RB")
+        else:
+            pdf.set_font_size(8)
+            new_lines = split_text(project_title, 89, pdf)
+            project_title_1 = new_lines[0]
+            project_title_2 = new_lines[1] + '...'
+            pdf.cell(90, 5, text=f"{project_title_1}",
+                     ln=True, align='L', border="R")
+            pdf.set_x(50)
+            pdf.cell(90, 5, text=f"{project_title_2}",
+                     ln=True, align='L', border="RB")
+        pdf.set_x(35)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(15, 10, text="Bucket: ", ln=0, align='L', border="B")
+        pdf.set_font_size(12)
+        pdf.set_text_color(70, 70, 70)
+        pdf.cell(90, 10, text=f"{bucket_title}",
+                 ln=True, align='L', border="RB")
+        pdf.set_x(35)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(15, 10, text="Date: ", ln=0, align='L')
+        pdf.set_font_size(12)
+        pdf.set_text_color(70, 70, 70)
+        pdf.cell(90, 10, text=f"{date}", ln=0, align='L', border="R")
+        pdf.set_y(pdf.get_y() - 20)
+        pdf.set_x(140)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(15, 10, text=f"Author: ", ln=0, align='L', border="B")
+        pdf.set_x(155)
+        pdf.set_font_size(12)
+        pdf.set_text_color(70, 70, 70)
+        pdf.cell(50, 10, text=f"{author}", ln=True, align='C', border="B")
+        pdf.set_x(140)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(20, 10, text=f"Signature: ", ln=True, align='L')
+
+        if signature_url:
+            img_width = 50
+            img_height = 20
+
+            img_x = pdf.w - img_width - 0
+            # Set the y coordinate of the image to the current y coordinate plus the height of the cell
+            img_y = pdf.get_y() - 10
+
+            pdf.image(signature_url, x=img_x, y=img_y,
+                      w=img_width, h=img_height)
+
+        res = pdf.output()
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 410)
+    try:
+        with open(f"{SOURCE_PATH}/output/{note_id}.pdf", 'wb') as f:
+            f.write(res)
+            print(f"{SOURCE_PATH}/output/{note_id}.pdf saved")
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 110)
 
     return f"{SOURCE_PATH}/output/{note_id}"
 
