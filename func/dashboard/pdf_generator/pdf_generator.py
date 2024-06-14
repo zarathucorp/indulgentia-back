@@ -1,6 +1,6 @@
 from PIL import Image, UnidentifiedImageError
 from pdfmerge import pdfmerge
-from fpdf import FPDF
+from fpdf import FPDF, FontFace
 import io
 from pydantic import UUID4, BaseModel
 from fastapi import HTTPException, UploadFile, File
@@ -363,11 +363,18 @@ async def generate_pdf_using_markdown(note_id: str, markdown_content: str, proje
                      fname=f"{SOURCE_PATH}/Pretendard-Regular.ttf")
         pdf.add_font("Pretendard", style="B",
                      fname=f"{SOURCE_PATH}/Pretendard-Bold.ttf")
-        pdf.set_font("Pretendard", size=18)
+        pdf.add_font("PretendardB", style="",
+                     fname=f"{SOURCE_PATH}/Pretendard-Bold.ttf")
+        pdf.set_font("Pretendard", size=16)
 
         html = markdown(markdown_content)
         # pdf.multi_cell(w=200, text=markdown_content, markdown=True)
-        pdf.write_html(html)
+        print(html)
+        pdf.write_html(html, tag_styles={
+            "h1": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=24),
+            "h2": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=20),
+            "a": FontFace(family="Pretendard", color=(0, 0, 255), emphasis=None),
+        }, li_prefix_color=(0, 0, 0), ul_bullet_char=u"\u2022")
 
         pdf.set_font_size(10)
         pdf.set_y(pdf.h - 50)

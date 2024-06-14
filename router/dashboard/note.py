@@ -325,7 +325,7 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
 
         first_name = user_data[1][0].get("first_name")
         last_name = user_data[1][0].get("last_name")
-        if not first_name or not last_name:
+        if not first_name and not last_name:
             raise_custom_error(401, 121)
             # username = "No Name"
         else:
@@ -337,8 +337,10 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
             raise_custom_error(500, 250)
 
         pdf_res = await generate_pdf_using_markdown(note_id=note_id_string, markdown_content=GithubMarkdownRequest.markdownContent, project_title=breadcrumb_data[1][0].get("project_title"), bucket_title=breadcrumb_data[1][0].get("bucket_title"), author=username, signature_url=url)
+        raise Exception("test")
         await sign_pdf(pdf_res)
         signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id_string}_signed.pdf"
+        SOURCE_PATH = "func/dashboard/pdf_generator"
         try:
             # upload pdf
             with open(signed_pdf_res, "rb") as f:
@@ -346,7 +348,6 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
         except Exception as e:
             print(e)
             # delete result pdf
-            SOURCE_PATH = "func/dashboard/pdf_generator"
             if os.path.isfile(f"{SOURCE_PATH}/output/{note_id_string}.pdf"):
                 os.unlink(f"{SOURCE_PATH}/output/{note_id_string}.pdf")
                 print(f"{SOURCE_PATH}/output/{note_id_string}.pdf deleted")
@@ -355,8 +356,16 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
         upload_blob(pdf_data, note_id_string + ".pdf")
         ledger_result = write_ledger(
             {"id": note_id_string, "hash": hashlib.sha256(pdf_data).hexdigest()})
-        transaction_id = ledger_result.get("transactionId")
+        try:
+            os.unlink(f"{SOURCE_PATH}/output/{note_id_string}.pdf")
+            print(f"{SOURCE_PATH}/output/{note_id_string}.pdf deleted")
+            os.unlink(f"{SOURCE_PATH}/output/{note_id_string}_signed.pdf")
+            print(f"{SOURCE_PATH}/output/{note_id_string}_signed.pdf deleted")
+        except Exception as e:
+            print(e)
+            raise_custom_error(500, 130)
 
+        transaction_id = ledger_result.get("transactionId")
         current_time = datetime.now(
             timezone('Asia/Seoul')).strftime("%Y-%m-%d %H:%M:%S")
         note = schemas.NoteCreate(
