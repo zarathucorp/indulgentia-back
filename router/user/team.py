@@ -25,16 +25,12 @@ def get_team_user_list(req: Request):
         raise_custom_error(403, 213)
     user_team_id = get_user_team(user)
     if not user_team_id:
-        return JSONResponse(content={
-            "status": "succeed",
-            "data": None
-        })
         raise_custom_error(401, 540)
     try:
-        UUID(user_team_id)
+        user_team_id_uuid = UUID(user_team_id)
     except ValueError:
         raise_custom_error(422, 210)
-    res = get_team_user(user_team_id)
+    res = get_team_user(user_team_id_uuid)
     # need verify timestamp logic
 
     return JSONResponse(content={
@@ -319,11 +315,7 @@ def get_team_invite_sent_list(req: Request):
         raise_custom_error(403, 213)
     team_id = get_user_team(user)
     if not team_id:
-        return JSONResponse(content={
-            "status": "succeed",
-            "data": []
-        })
-        # raise_custom_error(401, 540)
+        raise_custom_error(401, 540)
     if not validate_user_is_leader(user, UUID(team_id)):
         raise_custom_error(401, 520)
     data, count = supabase.rpc("get_team_invite_send_and_team_and_user_setting", {
