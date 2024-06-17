@@ -25,6 +25,10 @@ def get_team_user_list(req: Request):
         raise_custom_error(403, 213)
     user_team_id = get_user_team(user)
     if not user_team_id:
+        return JSONResponse(content={
+            "status": "succeed",
+            "data": None
+        })
         raise_custom_error(401, 540)
     try:
         UUID(user_team_id)
@@ -47,17 +51,18 @@ def get_user_team_req(req: Request):
         raise_custom_error(403, 213)
     user_team_id = get_user_team(user)
     if not user_team_id:
-        raise_custom_error(422, 210)
-    try:
-        UUID(user_team_id)
-    except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid team id")
-    data, count = supabase.table("team").select(
-        "*").eq("is_deleted", False).eq("id", user_team_id).execute()
-    if not data[1]:
-        raise_custom_error(500, 242)
-    res = data[1][0]
-    print(res)
+        return JSONResponse(content={
+            "status": "succeed",
+            "data": None
+        })
+        raise_custom_error(401, 540)
+    else:
+        data, count = supabase.table("team").select(
+            "*").eq("is_deleted", False).eq("id", user_team_id).execute()
+        # if not data[1]:
+        #     raise_custom_error(500, 242)
+        res = data[1][0]
+        print(res)
     return JSONResponse(content={
         "status": "succeed",
         "data": res
@@ -313,6 +318,12 @@ def get_team_invite_sent_list(req: Request):
     if not user:
         raise_custom_error(403, 213)
     team_id = get_user_team(user)
+    if not team_id:
+        return JSONResponse(content={
+            "status": "succeed",
+            "data": []
+        })
+        # raise_custom_error(401, 540)
     if not validate_user_is_leader(user, UUID(team_id)):
         raise_custom_error(401, 520)
     data, count = supabase.rpc("get_team_invite_send_and_team_and_user_setting", {
