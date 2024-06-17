@@ -54,7 +54,7 @@ class ProjectBase(BaseModel):
 
 
 class ProjectCreate(ProjectBase):
-    is_deleted: bool = False
+    pass
 
 
 class ProjectUpdate(ProjectBase):
@@ -93,7 +93,7 @@ class GitrepoBase(BaseModel):
 
 
 class GitrepoCreate(GitrepoBase):
-    is_deleted: bool = False
+    pass
 
 
 class GitrepoUpdate(GitrepoBase):
@@ -124,7 +124,7 @@ class BucketBase(BaseModel):
 
 
 class BucketCreate(BucketBase):
-    is_deleted: bool = False
+    pass
 
 
 class BucketUpdate(BucketBase):
@@ -158,7 +158,6 @@ class NoteBase(BaseModel):
 
 class NoteCreate(NoteBase):
     id: UUID4
-    is_deleted: bool = False
 
 
 class NoteUpdate(NoteBase):
@@ -211,7 +210,6 @@ class CreateSignature(BaseModel):
 
 class TeamBase(BaseModel):
     name: str
-    is_premium: bool = False
 
 
 class TeamCreate(TeamBase):

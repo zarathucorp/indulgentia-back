@@ -161,15 +161,19 @@ async def get_breadcrumb(req: Request, bucket_id: str):
 
 @router.get("/{bucket_id}/github_repo", tags=["bucket"])
 async def get_connected_github_repositories(req: Request, bucket_id: str):
+    try:
+        uuid.UUID(bucket_id)
+    except ValueError:
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
         # raise HTTPException(status_code=401, detail="Unauthorized")
     data = get_connected_gitrepo(uuid.UUID(bucket_id))
-    # data, count = supabase.rpc(
-    #     "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
-    # if not data[1]:
-    #    raise_custom_error(401, 310)
+    verify_data, count = supabase.rpc(
+        "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
+    if not verify_data[1]:
+        raise_custom_error(401, 310)
     return JSONResponse(content={
         "status": "succeed",
         "data": data
@@ -178,9 +182,17 @@ async def get_connected_github_repositories(req: Request, bucket_id: str):
 
 @router.post("/{bucket_id}/github_repo", tags=["bucket"])
 async def connect_github_repository(req: Request, bucket_id: str, newRepo: schemas.GitrepoCreate):
+    try:
+        uuid.UUID(bucket_id)
+    except ValueError:
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    verify_data, count = supabase.rpc(
+        "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
+    if not verify_data[1]:
+        raise_custom_error(401, 310)
     data = create_connected_gitrepo(newRepo, user)
     return JSONResponse(content={
         "status": "succeed",
@@ -190,9 +202,18 @@ async def connect_github_repository(req: Request, bucket_id: str, newRepo: schem
 
 @router.delete("/{bucket_id}/github_repo/{repo_id}", tags=["bucket"])
 async def disconnect_github_repository(req: Request, bucket_id: str, repo_id: str):
+    try:
+        uuid.UUID(bucket_id)
+        uuid.UUID(repo_id)
+    except ValueError:
+        raise_custom_error(422, 210)
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    verify_data, count = supabase.rpc(
+        "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
+    if not verify_data[1]:
+        raise_custom_error(401, 310)
     data = flag_is_deleted_gitrepo(uuid.UUID(repo_id))
     return JSONResponse(content={
         "status": "succeed",
