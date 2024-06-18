@@ -382,3 +382,34 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
         "status": "succeed",
         "data": res_list
     })
+
+
+@ router.post("/{note_id}/verify", tags=["note"])
+def verify_note_pdf(req: Request, note_id: str, file: UploadFile = File()):
+    try:
+        uuid.UUID(note_id)
+    except ValueError:
+        raise_custom_error(422, 210)
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise_custom_error(403, 213)
+    if not file or not file.content_type == "application/pdf":
+        raise_custom_error(422, 240)
+    file_hash = hashlib.sha256(file.file.read()).hexdigest()
+
+    data, count = supabase.table("note").select(
+        "timestamp_transaction_id").eq("id", note_id).execute()
+    if not data[1]:
+        raise_custom_error(500, 231)
+    entry = read_ledger(data[1][0].get("timestamp_transaction_id"))
+    print(type(entry))
+    print(entry)
+    ledger_contents = json.loads(entry.get("entry").get("contents"))
+    print(type(ledger_contents))
+    print(ledger_contents)
+    ledger_contents["is_equal"] = file_hash == ledger_contents.get("hash")
+
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": ledger_contents
+    })
