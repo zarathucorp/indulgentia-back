@@ -113,6 +113,25 @@ def split_text(text: str, max_width: int, pdf: FPDF):
     return lines
 
 
+def delete_old_files(directory_path):
+    try:
+        print(f"Deleting old files in {directory_path}")
+        # Get the current time
+        current_time = time.time()
+
+        # Iterate over all files in the directory
+        for filename in os.listdir(directory_path):
+            file_path = os.path.join(directory_path, filename)
+
+            # If the file is a file (not a directory) and it was last modified more than 24 hours ago
+            if os.path.isfile(file_path) and os.path.getmtime(file_path) < current_time - 24 * 60 * 60:
+                # Delete the file
+                os.remove(file_path)
+    except OSError as e:
+        print(e)
+        raise_custom_error(500, 130)
+
+
 def create_intro_page(title: str, author: str, description: str | None, SOURCE_PATH: str, note_id: str, project_title: str, bucket_title, signature_url: str | None = None):
     from datetime import datetime
 
@@ -237,6 +256,10 @@ async def generate_pdf(title: str, username: str, note_id: str, description: str
     AVAILABLE_EXTENSIONS = DOC_EXTENSIONS + IMAGE_EXTENSIONS + ["pdf"]
     A4_SIZE = (595, 842)
 
+    # delete old files
+    delete_old_files(f"{SOURCE_PATH}/input")
+    delete_old_files(f"{SOURCE_PATH}/output")
+
     # Intro PDF
     print(description)
     print(files)
@@ -350,6 +373,10 @@ async def generate_pdf_using_markdown(note_id: str, markdown_content: str, proje
     from fpdf import HTMLMixin
     from markdown import markdown
     SOURCE_PATH = "func/dashboard/pdf_generator"
+
+    # delete old files
+    delete_old_files(f"{SOURCE_PATH}/input")
+    delete_old_files(f"{SOURCE_PATH}/output")
 
     try:
         pdf = FPDF()
