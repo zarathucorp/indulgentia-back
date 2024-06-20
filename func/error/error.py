@@ -46,6 +46,7 @@ def raise_custom_error(status_code: int, additional_code: int):
             "300": "Unauthorized user access to Bucket",
             "310": "User is not in this bucket",
             "320": "User is not this bucket owner",
+            "330": "Git repository already exists",
 
             "400": "Unauthorized user access to Note",
             "410": "User is not in this note",

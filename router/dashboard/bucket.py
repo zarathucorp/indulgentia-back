@@ -193,6 +193,8 @@ async def connect_github_repository(req: Request, bucket_id: str, newRepo: schem
         "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     if not verify_data[1]:
         raise_custom_error(401, 310)
+    if supabase.rpc("check_gitrepo_exists", {"g_bucket_id": bucket_id, "g_repo_url": newRepo.repo_url}).execute():
+        raise_custom_error(401, 330)
     data = create_connected_gitrepo(newRepo, user)
     return JSONResponse(content={
         "status": "succeed",
