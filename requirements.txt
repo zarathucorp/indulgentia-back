@@ -43,6 +43,7 @@ isodate==0.6.1
 loguru==0.7.2
 lxml==5.2.2
 Markdown==3.6
+markdown2==2.4.13
 msal==1.28.0
 msal-extensions==1.1.0
 msrest==0.7.1
