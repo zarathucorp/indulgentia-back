@@ -67,10 +67,7 @@ async def add_signature_file(req: Request, file: UploadFile = File(...)):
             raise_custom_error(500, 220)
         return JSONResponse(content={
             "status": "succeed",
-            "data": {
-                "has_signature": data[1].get("has_signature"),
-                "signature_type": data[1].get("signature_type")
-            }
+            "has_signature": data[1][0].get("has_signature")
         })
     else:
         raise_custom_error(500, 311)
