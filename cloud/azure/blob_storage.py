@@ -43,10 +43,6 @@ def generate_presigned_url(blob_name, container_name=DEFAULT_AZURE_CONTAINER_NAM
 
 
 def upload_blob(data: bytes, blob_name: str):
-    print(blob_name)
-    print(data)
-    print(AZURE_STORAGE_CONNECTION_STRING)
-    print(DEFAULT_AZURE_CONTAINER_NAME)
     try:
         blob_client = azure_blob_client.get_blob_client(
             container=DEFAULT_AZURE_CONTAINER_NAME, blob=blob_name)
