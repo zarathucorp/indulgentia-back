@@ -320,7 +320,8 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
         if has_signature:
             url = generate_presigned_url(
                 str(user_data[1][0].get("id")) + ".png")
-
+        else:
+            url = None
         first_name = user_data[1][0].get("first_name")
         last_name = user_data[1][0].get("last_name")
         if not first_name and not last_name:
