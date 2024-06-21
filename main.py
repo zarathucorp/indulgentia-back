@@ -10,6 +10,7 @@ from router.admin import admin
 from router.dashboard import dashboard
 from router.user import user
 from router.payment import payment
+from router.validate import validate
 
 load_dotenv(verbose=True)
 
@@ -36,6 +37,7 @@ app.include_router(admin.router)
 app.include_router(dashboard.router)
 app.include_router(user.router)
 app.include_router(payment.router)
+app.include_router(validate.router)
 
 
 if __name__ == "__main__":
