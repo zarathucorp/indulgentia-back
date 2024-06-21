@@ -154,6 +154,7 @@ class NoteBase(BaseModel):
     github_type: Literal["Commit", "PR", "Issue"] | None = None
     github_hash: str | None = None
     github_link: str | None = None
+    pdf_hash: str | None = None
 
 
 class NoteCreate(NoteBase):

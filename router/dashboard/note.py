@@ -15,6 +15,7 @@ from func.dashboard.crud.note import *
 from func.auth.auth import *
 from func.dashboard.pdf_generator.pdf_generator import generate_pdf, generate_pdf_using_markdown
 from func.note_handling.pdf_sign import sign_pdf
+from func.note_handling.pdf_verify import verify_pdf
 from cloud.azure.confidential_lendger import write_ledger, read_ledger
 from func.error.error import raise_custom_error
 
@@ -137,8 +138,9 @@ async def add_note(req: Request,
             print(f"{SOURCE_PATH}/output/{note_id}.pdf deleted")
         raise_custom_error(500, 120)
     upload_blob(pdf_data, str(note_id) + ".pdf")
+    pdf_hash = hashlib.sha256(pdf_data).hexdigest()
     ledger_result = write_ledger(
-        {"id": str(note_id), "hash": hashlib.sha256(pdf_data).hexdigest()})
+        {"id": str(note_id), "hash": pdf_hash})
     transaction_id = ledger_result.get("transactionId")
     try:
         # delete result pdf
@@ -158,7 +160,8 @@ async def add_note(req: Request,
         title=title,
         timestamp_transaction_id=transaction_id,
         file_name=file_name,
-        is_github=is_github
+        is_github=is_github,
+        pdf_hash=pdf_hash
     )
     res = create_note(note)
     return JSONResponse(content={
@@ -264,26 +267,26 @@ async def get_breadcrumb(req: Request, note_id: str):
     })
 
 
-@ router.get("/{note_id}/timestamp", tags=["note"])
-def get_note_timestamp(req: Request, note_id: str):
-    try:
-        uuid.UUID(note_id)
-    except ValueError:
-        raise_custom_error(422, 210)
-    user: UUID4 = verify_user(req)
-    if not user:
-        raise_custom_error(403, 213)
-    data, count = supabase.table("note").select(
-        "transaction_id").eq("id", note_id).execute()
-    if not data[1]:
-        raise_custom_error(500, 231)
-    transaction_id = data[1][0].get("transaction_id")
-    entry = read_ledger(transaction_id)
+# @ router.get("/{note_id}/timestamp", tags=["note"])
+# def get_note_timestamp(req: Request, note_id: str):
+#     try:
+#         uuid.UUID(note_id)
+#     except ValueError:
+#         raise_custom_error(422, 210)
+#     user: UUID4 = verify_user(req)
+#     if not user:
+#         raise_custom_error(403, 213)
+#     data, count = supabase.table("note").select(
+#         "timestamp_transaction_id").eq("id", note_id).execute()
+#     if not data[1]:
+#         raise_custom_error(500, 231)
+#     transaction_id = data[1][0].get("timestamp_transaction_id")
+#     entry = read_ledger(transaction_id)
 
-    return JSONResponse(content={
-        "status": "succeed",
-        "data": entry
-    })
+#     return JSONResponse(content={
+#         "status": "succeed",
+#         "data": entry
+#     })
 
 
 class RepositoryInfo(BaseModel):
@@ -351,8 +354,9 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
             raise_custom_error(500, 120)
         # raise Exception("test")
         upload_blob(pdf_data, note_id_string + ".pdf")
+        pdf_hash = hashlib.sha256(pdf_data).hexdigest()
         ledger_result = write_ledger(
-            {"id": note_id_string, "hash": hashlib.sha256(pdf_data).hexdigest()})
+            {"id": note_id_string, "hash": pdf_hash})
         try:
             os.unlink(f"{SOURCE_PATH}/output/{note_id_string}.pdf")
             print(f"{SOURCE_PATH}/output/{note_id_string}.pdf deleted")
@@ -374,7 +378,8 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
             file_name=f"{current_time}에 생성된 {GithubMarkdownRequest.eventType} 노트(Github)",
             is_github=True,
             github_type=GithubMarkdownRequest.eventType,
-            github_link=GithubMarkdownRequest.repositoryInfo.url
+            github_link=GithubMarkdownRequest.repositoryInfo.url,
+            pdf_hash=pdf_hash
         )
         res = create_note(note)
         res_list.append(res)
@@ -384,8 +389,48 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
     })
 
 
-@ router.post("/{note_id}/verify", tags=["note"])
-def verify_note_pdf(req: Request, note_id: str, file: UploadFile = File()):
+@router.post("/verify", tags=["note"])
+def verify_note_pdf(req: Request, file: UploadFile = File()):
+    if not file or not file.content_type == "application/pdf":
+        raise_custom_error(422, 240)
+    file_contents = file.file.read()
+    pyhanko_verify_res = verify_pdf(file_contents)
+    file_hash = hashlib.sha256(file_contents).hexdigest()
+    print(file_hash)
+    note_data, count = supabase.table("note").select(
+        "*").eq("is_deleted", False).eq("pdf_hash", file_hash).execute()
+    if len(note_data[1]) > 1:
+        raise_custom_error(500, 231)
+    hash_exist_verify_res = not not note_data[1]
+    if hash_exist_verify_res:
+        transaction_id = note_data[1][0].get("timestamp_transaction_id")
+        entry = read_ledger(transaction_id)
+        ledger_contents = json.loads(entry.get("entry").get("contents"))
+        hash_equal_verify_res = file_hash == ledger_contents.get("hash")
+    else:
+        ledger_contents = {}
+        hash_equal_verify_res = False
+
+    if not pyhanko_verify_res:
+        verify_res = False
+        message = "PDF is modified"
+    elif not hash_exist_verify_res:
+        verify_res = False
+        message = "PDF does not exist in database"
+    elif not hash_equal_verify_res:
+        verify_res = False
+        message = "PDF is different from the one in database"
+    else:
+        verify_res = True
+        message = "PDF is verified"
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": {**ledger_contents, "is_verified": verify_res, "message": message}
+    })
+
+
+@ router.post("/verify/{note_id}", tags=["note"])
+def verify_note_pdf_with_note_id(req: Request, note_id: str, file: UploadFile = File()):
     try:
         uuid.UUID(note_id)
     except ValueError:
@@ -402,14 +447,15 @@ def verify_note_pdf(req: Request, note_id: str, file: UploadFile = File()):
     if not data[1]:
         raise_custom_error(500, 231)
     entry = read_ledger(data[1][0].get("timestamp_transaction_id"))
-    print(type(entry))
-    print(entry)
     ledger_contents = json.loads(entry.get("entry").get("contents"))
-    print(type(ledger_contents))
-    print(ledger_contents)
-    ledger_contents["is_equal"] = file_hash == ledger_contents.get("hash")
+
+    veify_res = file_hash == ledger_contents.get("hash")
+    if veify_res:
+        message = "PDF is verified"
+    else:
+        message = "PDF is different from the one in database"
 
     return JSONResponse(content={
         "status": "succeed",
-        "data": ledger_contents
+        "data": {**ledger_contents, "is_verified": veify_res, "message": message}
     })
