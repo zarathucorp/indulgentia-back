@@ -3,9 +3,18 @@ from env import AZURE_STORAGE_CONNECTION_STRING, DEFAULT_AZURE_CONTAINER_NAME
 from datetime import datetime, timedelta
 from pydantic import UUID4
 from func.error.error import raise_custom_error
+import requests
 
 azure_blob_client = BlobServiceClient.from_connection_string(
     conn_str=AZURE_STORAGE_CONNECTION_STRING)
+
+
+def validate_url(url):
+    response = requests.get(url)
+    if response.status_code == 404:
+        raise_custom_error(500, 312)
+    else:
+        print("URL is valid")
 
 
 def generate_presigned_url(blob_name, container_name=DEFAULT_AZURE_CONTAINER_NAME, expiry_minutes=5):
@@ -25,13 +34,19 @@ def generate_presigned_url(blob_name, container_name=DEFAULT_AZURE_CONTAINER_NAM
 
         blob_url = f"https://{account_name}.blob.core.windows.net/" + \
             f"{container_name}/{blob_name}?{sas_token}"
-        return blob_url
     except Exception as e:
         print(e)
         raise_custom_error(500, 312)
 
+    validate_url(blob_url)
+    return blob_url
+
 
 def upload_blob(data: bytes, blob_name: str):
+    print(blob_name)
+    print(data)
+    print(AZURE_STORAGE_CONNECTION_STRING)
+    print(DEFAULT_AZURE_CONTAINER_NAME)
     try:
         blob_client = azure_blob_client.get_blob_client(
             container=DEFAULT_AZURE_CONTAINER_NAME, blob=blob_name)
