@@ -16,7 +16,7 @@ from func.auth.auth import *
 from func.dashboard.pdf_generator.pdf_generator import generate_pdf, generate_pdf_using_markdown
 from func.note_handling.pdf_sign import sign_pdf
 from func.note_handling.pdf_verify import verify_pdf
-from cloud.azure.confidential_lendger import write_ledger, read_ledger
+from cloud.azure.confidential_lendger import write_ledger, read_ledger, get_ledger_receipt
 from func.error.error import raise_custom_error
 
 
@@ -400,7 +400,7 @@ def verify_note_pdf(req: Request, file: UploadFile = File()):
     except IndexError:        
         return JSONResponse(content={
             "status": "succeed",
-            "data": {"is_verified": False, "message": "PDF is not signed by Rndsillog"}
+            "data": {"is_verified": False, "message": "PDF is not signed by Rndsillog", "entry": None, "receipt": None}
         })
     file_hash = hashlib.sha256(file_contents).hexdigest()
     print(file_hash)
@@ -411,11 +411,14 @@ def verify_note_pdf(req: Request, file: UploadFile = File()):
     hash_exist_verify_res = not not note_data[1]
     if hash_exist_verify_res:
         transaction_id = note_data[1][0].get("timestamp_transaction_id")
-        entry = read_ledger(transaction_id)
-        ledger_contents = json.loads(entry.get("entry").get("contents"))
+        entry = read_ledger(transaction_id)["entry"]
+        ledger_contents = json.loads(entry.get("contents"))
+        entry["contents"] = ledger_contents
         hash_equal_verify_res = file_hash == ledger_contents.get("hash")
+        receipt = get_ledger_receipt(transaction_id).get("receipt")
     else:
-        ledger_contents = {}
+        entry = None
+        receipt = None
         hash_equal_verify_res = False
 
     if not pyhanko_verify_res:
@@ -432,7 +435,7 @@ def verify_note_pdf(req: Request, file: UploadFile = File()):
         message = "PDF is verified"
     return JSONResponse(content={
         "status": "succeed",
-        "data": {**ledger_contents, "is_verified": verify_res, "message": message}
+        "data": {"is_verified": verify_res, "message": message, "entry": entry, "receipt": receipt}
     })
 
 
@@ -453,8 +456,11 @@ def verify_note_pdf_with_note_id(req: Request, note_id: str, file: UploadFile = 
         "timestamp_transaction_id").eq("id", note_id).execute()
     if not data[1]:
         raise_custom_error(500, 231)
-    entry = read_ledger(data[1][0].get("timestamp_transaction_id"))
-    ledger_contents = json.loads(entry.get("entry").get("contents"))
+    transaction_id = data[1][0].get("timestamp_transaction_id")
+    entry = read_ledger(transaction_id)["entry"]
+    ledger_contents = json.loads(entry.get("contents"))
+    entry["contents"] = ledger_contents
+    receipt = get_ledger_receipt(transaction_id).get("receipt")
 
     veify_res = file_hash == ledger_contents.get("hash")
     if veify_res:
@@ -464,5 +470,5 @@ def verify_note_pdf_with_note_id(req: Request, note_id: str, file: UploadFile = 
 
     return JSONResponse(content={
         "status": "succeed",
-        "data": {**ledger_contents, "is_verified": veify_res, "message": message}
+        "data": { "is_verified": veify_res, "message": message, "entry": entry, "receipt": receipt}
     })
