@@ -400,7 +400,7 @@ def verify_note_pdf(req: Request, file: UploadFile = File()):
     except IndexError:        
         return JSONResponse(content={
             "status": "succeed",
-            "data": {"is_verified": False, "message": "PDF is not signed by Rndsillog"}
+            "data": {"is_verified": False, "message": "PDF is not signed by Rndsillog", "entry": None, "receipt": None}
         })
     file_hash = hashlib.sha256(file_contents).hexdigest()
     print(file_hash)
@@ -457,7 +457,7 @@ def verify_note_pdf_with_note_id(req: Request, note_id: str, file: UploadFile = 
     if not data[1]:
         raise_custom_error(500, 231)
     transaction_id = data[1][0].get("timestamp_transaction_id")
-    entry = read_ledger(data[1][0].get(transaction_id))["entry"]
+    entry = read_ledger(transaction_id)["entry"]
     ledger_contents = json.loads(entry.get("contents"))
     entry["contents"] = ledger_contents
     receipt = get_ledger_receipt(transaction_id).get("receipt")
