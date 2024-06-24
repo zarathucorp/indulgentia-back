@@ -395,7 +395,13 @@ def verify_note_pdf(req: Request, file: UploadFile = File()):
     if not file or not file.content_type == "application/pdf":
         raise_custom_error(422, 240)
     file_contents = file.file.read()
-    pyhanko_verify_res = verify_pdf(file_contents)
+    try:
+        pyhanko_verify_res = verify_pdf(file_contents)
+    except IndexError:        
+        return JSONResponse(content={
+            "status": "succeed",
+            "data": {"is_verified": False, "message": "PDF is not signed by Rndsillog"}
+        })
     file_hash = hashlib.sha256(file_contents).hexdigest()
     print(file_hash)
     note_data, count = supabase.table("note").select(
