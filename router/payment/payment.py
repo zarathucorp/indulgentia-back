@@ -6,6 +6,9 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi import APIRouter
 from env import TOSS_PAYMENT_CLIENT_KEY, TOSS_PAYMENT_SECRET_KEY
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
 from database.schemas import *
 from database.supabase import supabase
 from func.auth.auth import verify_user
@@ -33,13 +36,13 @@ class ConfirmPaymentRequest(BaseModel):
     paymentKey: str
     orderId: str
     amount: int
-    premium_started_at: date
-    premium_expired_at: date
+    is_annual: bool = False
     max_members: int
+    note: str | None = None
 
 
 
-@router.post("/confirm-payment/", tags=["payment"])
+@router.post("/confirm-payment", tags=["payment"])
 async def confirm_payment(req: Request, request: ConfirmPaymentRequest):
     user: UUID4 = verify_user(req)
     if not user:
@@ -69,19 +72,15 @@ async def confirm_payment(req: Request, request: ConfirmPaymentRequest):
                 raise HTTPException(
                     status_code=500, detail="511")
 
-            # started_at, expired_at dummy data, need to be updated
-            from datetime import datetime
-            from dateutil.relativedelta import relativedelta
             today = datetime.today()
-            next_month = today + relativedelta(months=1)
-            started_at = next_month.replace(day=1).strftime("%Y-%m-%d")
+            started_at = today.strftime("%Y-%m-%d")
             # started_at = request.get("premium_started_at", None)
-            month_after_next = today + relativedelta(months=2)
-            expired_at = month_after_next.replace(day=1).strftime("%Y-%m-%d")
+            after_month = today + relativedelta(months=1)
+            expired_at = after_month.strftime("%Y-%m-%d")
             # expired_at = request.get("premium_expired_at", None)
 
-            paid_team = TeamPay(team_id=user_team_id, is_premium=True, premium_started_at=started_at,
-                                premium_expired_at=expired_at, )
+            paid_team = TeamPay(id=user_team_id, is_premium=True, premium_started_at=started_at,
+                                premium_expired_at=expired_at, max_members=request.max_members)
             team_data, count = supabase.table("team").update(paid_team.model_dump(mode="json")).eq("id", user_team_id).execute()
             if not team_data[1]:
                 raise_custom_error(500, 511)
@@ -89,7 +88,7 @@ async def confirm_payment(req: Request, request: ConfirmPaymentRequest):
                 #     status_code=400, detail=f"{error_data['code']}: {error_data['message']}")
 
             payment = response.json()
-            order = OrderCreate(team_id=user_team_id, order_no=request.orderId, status=payment["status"], payment_key=payment["paymentKey"], purchase_date=payment["approvedAt"], is_canceled=False, total_amount=payment["totalAmount"], purchase_user_id=user, payment_method=payment["method"], currency=payment["currency"], notes=request.get("notes", None))
+            order = OrderCreate(team_id=user_team_id, order_no=request.orderId, status=payment["status"], payment_key=payment["paymentKey"], purchase_datetime=payment["approvedAt"], is_canceled=False, total_amount=payment["totalAmount"], purchase_user_id=user, payment_method=payment["method"], currency=payment["currency"], notes=request.note)
             order_data, count = supabase.table("order").insert(order.model_dump(mode="json")).execute()
             if not order_data[1]:
                 raise_custom_error(500, 210)

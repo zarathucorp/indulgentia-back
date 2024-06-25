@@ -184,7 +184,7 @@ class OrderBase(BaseModel):
     order_no: str  # need verification?
     status: str | None = None
     payment_key: str
-    purchase_date: datetime
+    purchase_datetime: datetime
     is_canceled: bool = False
     total_amount: int
     refund_amount: int = 0
@@ -242,8 +242,8 @@ class TeamUpdate(TeamBase):
     pass
 
 
-class TeamPay(TeamBase):
-    team_id: UUID4
+class TeamPay(BaseModel):
+    id: UUID4
     is_premium: bool = True
     premium_started_at: date
     premium_expired_at: date
