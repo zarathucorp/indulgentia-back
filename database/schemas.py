@@ -183,7 +183,7 @@ class OrderBase(BaseModel):
     order_no: str  # need verification?
     status: str | None = None
     payment_key: str
-    purchase_data: datetime
+    purchase_date: datetime
     is_canceled: bool = False
     total_amount: int
     refund_amount: int = 0
@@ -211,6 +211,17 @@ class Order(OrderBase):
         if self.id is None:
             result.pop("id")
         return result
+    
+class OrderWebhook(BaseModel):
+    order_no: str
+    status: str | None = None
+    payment_key: str
+    is_canceled: bool = True
+    refund_amount: int = 0
+    payment_method: str | None = None
+    currency: str | None = None
+    notes: str | None = None
+
 
 
 class CreateSignature(BaseModel):
