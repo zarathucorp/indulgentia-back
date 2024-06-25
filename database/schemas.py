@@ -180,11 +180,17 @@ class Note(NoteBase):
 
 class OrderBase(BaseModel):
     team_id: UUID4
-    order_number: str  # need verification?
-    started_at: date
-    expired_at: date
+    order_no: str  # need verification?
     status: str | None = None
     payment_key: str
+    purchase_data: datetime
+    is_canceled: bool = False
+    total_amount: int
+    refund_amount: int = 0
+    purchase_user_id: UUID4
+    payment_method: str | None = None
+    currency: str | None = None
+    notes: str | None = None
 
 
 class OrderCreate(OrderBase):
@@ -222,3 +228,12 @@ class TeamCreate(TeamBase):
 
 class TeamUpdate(TeamBase):
     pass
+
+
+class TeamPay(TeamBase):
+    team_id: UUID4
+    is_premium: bool = True
+    premium_started_at: date
+    premium_expired_at: date
+    max_members: int
+    
