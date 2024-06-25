@@ -8,6 +8,7 @@ current_mode = os.getenv("RUNNING_MODE")
 if current_mode == "prod":
     AZURE_STORAGE_CONNECTION_STRING = os.getenv(
         "AZURE_STORAGE_CONNECTION_STRING")
+    DEFAULT_AZURE_CONTAINER_NAME = os.getenv("DEFAULT_AZURE_CONTAINER_NAME")
     TOSS_PAYMENT_CLIENT_KEY = os.getenv("TOSS_PAYMENT_CLIENT_KEY")
     TOSS_PAYMENT_SECRET_KEY = os.getenv("TOSS_PAYMENT_SECRET_KEY")
 elif current_mode == "dev":

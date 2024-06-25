@@ -1,6 +1,6 @@
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from pdfmerge import pdfmerge
-from fpdf import FPDF
+from fpdf import FPDF, FontFace
 import io
 from pydantic import UUID4, BaseModel
 from fastapi import HTTPException, UploadFile, File
@@ -10,8 +10,11 @@ import os
 import shutil
 import subprocess
 import re
+import asyncio
+import aiofiles
+from func.error.error import raise_custom_error
 
-
+import time
 # def generate_pdf(user_id:str, files=List[UploadFile], descriptions=List[str]):
 #     class PDF(FPDF):
 #         def header(self):
@@ -80,46 +83,172 @@ import re
 #     return res
 
 # MS office & HWP to PDF
+
+
 def convert_doc_to_pdf(source_path: str, file_name: str, extension: str):
-    subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf",
-                   f"{source_path}/input/{file_name}.{extension}", "--outdir", f"{source_path}/output"])
+    try:
+        subprocess.run(["libreoffice", "--headless", "--convert-to", "pdf",
+                        f"{source_path}/input/{file_name}.{extension}", "--outdir", f"{source_path}/output"])
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 420)
     return f"{file_name}.pdf"
 
 
-def create_intro_page(title: str, author: str, description: str | None, SOURCE_PATH: str, note_id: str):
+def split_text(text: str, max_width: int, pdf: FPDF):
+    words = text.split()
+    lines = []
+    current_line = ""
+
+    for word in words:
+        if pdf.get_string_width(current_line + " " + word) <= max_width:
+            current_line += " " + word
+        else:
+            lines.append(current_line)
+            current_line = word
+
+    if current_line:
+        lines.append(current_line)
+
+    return lines
+
+
+def delete_old_files(directory_path):
+    try:
+        print(f"Deleting old files in {directory_path}")
+        # Get the current time
+        current_time = time.time()
+
+        # Iterate over all files in the directory
+        for filename in os.listdir(directory_path):
+            file_path = os.path.join(directory_path, filename)
+
+            # If the file is a file (not a directory) and it was last modified more than 24 hours ago
+            if os.path.isfile(file_path) and os.path.getmtime(file_path) < current_time - 24 * 60 * 60:
+                # Delete the file
+                os.remove(file_path)
+    except OSError as e:
+        print(e)
+        raise_custom_error(500, 130)
+
+
+def create_intro_page(title: str, author: str, description: str | None, SOURCE_PATH: str, note_id: str, project_title: str, bucket_title, signature_url: str | None = None):
     from datetime import datetime
 
-    pdf = FPDF()
+    try:
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=5)
 
-    date = datetime.now().strftime("%Y-%m-%d")
-    pdf.add_page()
+        date = datetime.now().strftime("%Y-%m-%d")
+        date_kor = datetime.now().strftime("%Y년 %m월 %d일")
+        pdf.add_page()
 
-    pdf.add_font("Pretendard", style="",
-                 fname=f"{SOURCE_PATH}/Pretendard-Regular.ttf")
-    pdf.set_font("Pretendard", size=24)
-    pdf.cell(200, 10, txt=title, ln=True, align='C')
-    pdf.set_font("Pretendard", size=12)
-    pdf.cell(200, 10, txt=f"Author: {author}", ln=True, align='L')
-    pdf.cell(200, 10, txt=f"Date: {date}", ln=True, align='L')
-    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.add_font("Pretendard", style="",
+                     fname=f"{SOURCE_PATH}/Pretendard-Regular.ttf")
+        pdf.set_font("Pretendard", size=24)
+        pdf.cell(200, 10, text=title, ln=True, align='C')
+        pdf.set_y(pdf.get_y()+10)
+        pdf.line(0, pdf.get_y(), pdf.w, pdf.get_y())
 
-    pdf.set_font("Pretendard", size=12)
-    if description:
-        # # Limit description to 2000 characters
-        # description = description.encode(
-        #     "utf-8")[:2000].decode("utf-8", "ignore") if description else None
-        description = description[:1000]
-        print(description)
-        pdf.set_font("Pretendard", size=12)
-        pdf.multi_cell(0, 10, description)
+        pdf.set_y(pdf.get_y())
+        pdf.set_font_size(12)
+        pdf.cell(200, 10, text="Description", ln=True, align='L')
+        if description:
+            # # Limit description to 2000 characters
+            # description = description.encode(
+            #     "utf-8")[:2000].decode("utf-8", "ignore") if description else None
+            description = description[:1000]
+            print(description)
+            pdf.set_font_size(12)
+            pdf.multi_cell(0, 10, description)
 
-    res = pdf.output()
-    with open(f"{SOURCE_PATH}/output/{note_id}_intro.pdf", 'wb') as f:
-        f.write(res)
-        print(f"{SOURCE_PATH}/output/{note_id}_intro.pdf saved")
+        pdf.set_font_size(10)
+        pdf.set_y(pdf.h - 50)
+        pdf.cell(
+            190, 10, text=f"※ 본 문서는 {date_kor}에 작성되었으며 이후 수정되지 않았습니다. 이 문서의 내용은 변조 불가능한 블록체인에 기록되어 있습니다.", ln=0, align='R')
+
+        # project_title = "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+        # project_title = "대통령은 제3항과 제4항의 사유를 지체없이 공포하여야 한다. 선거에 있어서 최고득표자가 2인 이상인 때에는 국회의 재적의원 과반수가 출석한 공개회의에서 다수표를 얻은 자를 당선자로 한다. 국무총리는 국회의 동의를 얻어 대통령이 임명한다. 모든 국민은 신체의 자유를 가진다. 누구든지 법률에 의하지 아니하고는 체포·구속·압수·수색 또는 심문을 받지 아니하며, 법률과 적법한 절차에 의하지 아니하고는 처벌·보안처분 또는 강제노역을 받지 아니한다. 국회의 회의는 공개한다. 다만, 출석의원 과반수의 찬성이 있거나 의장이 국가의 안전보장을 위하여 필요하다고 인정할 때에는 공개하지 아니할 수 있다."
+        # Footer
+        pdf.set_font_size(12)
+        pdf.set_y(pdf.h - 40)
+        pdf.line(0, pdf.get_y(), pdf.w, pdf.get_y())
+        pdf.set_y(pdf.get_y() + 5)
+        pdf.set_x(35)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(15, 10, text="Project: ", ln=0, align='L', border="B")
+
+        pdf.set_font_size(12)
+        pdf.set_text_color(70, 70, 70)
+        lines = split_text(project_title, 89, pdf)
+        if len(lines) == 1:
+            pdf.cell(90, 10, text=f"{project_title}",
+                     ln=True, align='L', border="RB")
+        else:
+            pdf.set_font_size(8)
+            new_lines = split_text(project_title, 89, pdf)
+            project_title_1 = new_lines[0]
+            project_title_2 = new_lines[1] + '...'
+            pdf.cell(90, 5, text=f"{project_title_1}",
+                     ln=True, align='L', border="R")
+            pdf.set_x(50)
+            pdf.cell(90, 5, text=f"{project_title_2}",
+                     ln=True, align='L', border="RB")
+        pdf.set_x(35)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(15, 10, text="Bucket: ", ln=0, align='L', border="B")
+        pdf.set_font_size(12)
+        pdf.set_text_color(70, 70, 70)
+        pdf.cell(90, 10, text=f"{bucket_title}",
+                 ln=True, align='L', border="RB")
+        pdf.set_x(35)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(15, 10, text="Date: ", ln=0, align='L')
+        pdf.set_font_size(12)
+        pdf.set_text_color(70, 70, 70)
+        pdf.cell(90, 10, text=f"{date}", ln=0, align='L', border="R")
+        pdf.set_y(pdf.get_y() - 20)
+        pdf.set_x(140)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(15, 10, text=f"Author: ", ln=0, align='L', border="B")
+        pdf.set_x(155)
+        pdf.set_font_size(12)
+        pdf.set_text_color(70, 70, 70)
+        pdf.cell(50, 10, text=f"{author}", ln=True, align='C', border="B")
+        pdf.set_x(140)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(20, 10, text=f"Signature: ", ln=True, align='L')
+
+        if signature_url:
+            img_width = 50
+            img_height = 20
+
+            img_x = pdf.w - img_width - 0
+            # Set the y coordinate of the image to the current y coordinate plus the height of the cell
+            img_y = pdf.get_y() - 10
+
+            pdf.image(signature_url, x=img_x, y=img_y,
+                      w=img_width, h=img_height)
+
+        res = pdf.output()
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 410)
+    try:
+        with open(f"{SOURCE_PATH}/output/{note_id}_intro.pdf", 'wb') as f:
+            f.write(res)
+            print(f"{SOURCE_PATH}/output/{note_id}_intro.pdf saved")
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 110)
 
 
-def generate_pdf(title: str, username: str, note_id: str, description: str | None, files: List[Union[UploadFile, None]], contents: List[Union[bytes, None]]):
+async def generate_pdf(title: str, username: str, note_id: str, description: str | None, files: List[Union[UploadFile, None]], contents: List[Union[bytes, None]], project_title: str, bucket_title: str, signature_url: str | None = None):
     SOURCE_PATH = "func/dashboard/pdf_generator"
     DOC_EXTENSIONS = ["doc", "docx", "hwp",
                       "hwpx", "ppt", "pptx", "xls", "xlsx"]
@@ -127,31 +256,26 @@ def generate_pdf(title: str, username: str, note_id: str, description: str | Non
     AVAILABLE_EXTENSIONS = DOC_EXTENSIONS + IMAGE_EXTENSIONS + ["pdf"]
     A4_SIZE = (595, 842)
 
+    # delete old files
+    delete_old_files(f"{SOURCE_PATH}/input")
+    delete_old_files(f"{SOURCE_PATH}/output")
+
     # Intro PDF
     print(description)
     print(files)
-    create_intro_page(title, username, description, SOURCE_PATH, note_id)
+    create_intro_page(title, username, description,
+                      SOURCE_PATH, note_id, project_title, bucket_title, signature_url)
 
-    if files:
-        if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
-            raise HTTPException(
-                status_code=422, detail="Unprocessable file extension")
-        for idx, file in enumerate(files):
-            extension = file.filename.split(".")[-1]
-            filename = f"{note_id}_{idx}"
-
-        if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
-            raise HTTPException(
-                status_code=422, detail="Unprocessable file extension")
-
-        for idx, file in enumerate(files):
-            extension = file.filename.split(".")[-1]
-            filename = f"{note_id}_{idx}"
-
-            with open(f"{SOURCE_PATH}/input/{filename}.{extension}", 'wb') as f:
-                f.write(contents[idx])
+    async def process_file(file: UploadFile, idx: int, note_id: str, contents: List[Union[bytes, None]], SOURCE_PATH: str):
+        extension = file.filename.split(".")[-1]
+        filename = f"{note_id}_{idx}"
+        try:
+            # 비동기 파일 처리
+            async with aiofiles.open(f"{SOURCE_PATH}/input/{filename}.{extension}", 'wb') as f:
+                await f.write(contents[idx])
                 print(f"{SOURCE_PATH}/input/{filename}.{extension} saved")
 
+            # PIL은 비동기 지원 안됨
             if extension in DOC_EXTENSIONS:
                 res = convert_doc_to_pdf(SOURCE_PATH, filename, extension)
                 print(f"{SOURCE_PATH}/output/{res} saved")
@@ -166,23 +290,59 @@ def generate_pdf(title: str, username: str, note_id: str, description: str | Non
                     background.save(f"{SOURCE_PATH}/output/{filename}.pdf")
                 else:
                     image.save(f"{SOURCE_PATH}/output/{filename}.pdf")
-
                 print(f"{SOURCE_PATH}/output/{filename}.pdf saved")
             else:
-                # pdf file
-                with open(f"{SOURCE_PATH}/output/{filename}.{extension}", 'wb') as f:
-                    f.write(contents[idx])
+                # Copy PDF file asynchronously
+                async with aiofiles.open(f"{SOURCE_PATH}/output/{filename}.{extension}", 'wb') as f:
+                    await f.write(contents[idx])
                     print(f"{SOURCE_PATH}/output/{filename}.pdf saved")
+        except FileNotFoundError as e:
+            print(e)
+            # 이미지 pdf 없음
+            raise_custom_error(500, 430)
+        except ValueError as e:
+            print(e)
+            # 이미지 pdf 변환 오류
+            raise_custom_error(500, 430)
+        except UnidentifiedImageError as e:
+            print(e)
+            # PIL 범용 에러
+            raise_custom_error(500, 430)
+        except OSError as e:
+            print(e)
+            # file 읽기/쓰기 오류
+            raise_custom_error(500, 110)
+        except Exception as e:
+            print(e)
+            # 그외 에러
+            raise_custom_error(500, 400)
+
+    if files:
+        if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
+            raise_custom_error(422, 240)
+
+        # 소요시간 측정
+        # start = time.time()
+        # print("start time", start)
+        tasks = [process_file(file, idx, note_id, contents, SOURCE_PATH)
+                 for idx, file in enumerate(files)]
+        await asyncio.gather(*tasks)
+        # end = time.time()
+        # print("end_time", end)
+        # print("time elapsed", end - start)
 
     # merge pdfs
-    pdfs = [f"{SOURCE_PATH}/output/{note_id}_intro.pdf"]
-    if files:
-        pdfs = pdfs + \
-            [f"{SOURCE_PATH}/output/{note_id}_{idx}.pdf" for idx in range(
-                len(files))]
-    print(pdfs)
-    pdfmerge(pdfs, f"{SOURCE_PATH}/output/{note_id}.pdf")
-    print(f"{SOURCE_PATH}/output/{note_id}.pdf saved")
+    try:
+        pdfs = [f"{SOURCE_PATH}/output/{note_id}_intro.pdf"]
+        if files:
+            pdfs += [
+                f"{SOURCE_PATH}/output/{note_id}_{idx}.pdf" for idx in range(len(files))]
+        print(pdfs)
+        pdfmerge(pdfs, f"{SOURCE_PATH}/output/{note_id}.pdf")
+        print(f"{SOURCE_PATH}/output/{note_id}.pdf saved")
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 440)
 
     # delete files
     try:
@@ -202,9 +362,249 @@ def generate_pdf(title: str, username: str, note_id: str, description: str | Non
                     print(f"{file_output_path} deleted")
     except Exception as e:
         print(e)
+        raise_custom_error(500, 130)
     print("Success!")
 
     return f"{SOURCE_PATH}/output/{note_id}"
 
-# # testing
-# convert_doc_to_pdf("func/dashboard/pdf_generator", "3d4256d9-20e8-4acc-9c51-42c90b4456ab_0", "docx")
+
+async def generate_pdf_using_markdown(note_id: str, markdown_content: str, project_title: str, bucket_title: str, author: str, signature_url: str | None = None):
+    from datetime import datetime
+    from fpdf import HTMLMixin
+    from markdown import markdown
+    SOURCE_PATH = "func/dashboard/pdf_generator"
+
+    # delete old files
+    delete_old_files(f"{SOURCE_PATH}/input")
+    delete_old_files(f"{SOURCE_PATH}/output")
+
+    try:
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=5)
+
+        date = datetime.now().strftime("%Y-%m-%d")
+        date_kor = datetime.now().strftime("%Y년 %m월 %d일")
+        pdf.add_page()
+
+        pdf.add_font("Pretendard", style="",
+                     fname=f"{SOURCE_PATH}/Pretendard-Regular.ttf")
+        pdf.add_font("Pretendard", style="B",
+                     fname=f"{SOURCE_PATH}/Pretendard-Bold.ttf")
+        pdf.add_font("PretendardB", style="",
+                     fname=f"{SOURCE_PATH}/Pretendard-Bold.ttf")
+        pdf.set_font("Pretendard", size=16)
+
+        html = markdown(markdown_content)
+        # pdf.multi_cell(w=200, text=markdown_content, markdown=True)
+        print(html)
+        pdf.write_html(html, tag_styles={
+            "h1": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=24),
+            "h2": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=20),
+            "a": FontFace(family="Pretendard", color=(0, 0, 255), emphasis=None),
+        }, li_prefix_color=(0, 0, 0), ul_bullet_char=u"\u2022")
+
+        pdf.set_font_size(10)
+        pdf.set_y(pdf.h - 50)
+        pdf.cell(
+            190, 10, text=f"※ 본 문서는 {date_kor}에 작성되었으며 이후 수정되지 않았습니다. 이 문서의 내용은 변조 불가능한 블록체인에 기록되어 있습니다.", ln=0, align='R')
+
+        # project_title = "Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+        # project_title = "대통령은 제3항과 제4항의 사유를 지체없이 공포하여야 한다. 선거에 있어서 최고득표자가 2인 이상인 때에는 국회의 재적의원 과반수가 출석한 공개회의에서 다수표를 얻은 자를 당선자로 한다. 국무총리는 국회의 동의를 얻어 대통령이 임명한다. 모든 국민은 신체의 자유를 가진다. 누구든지 법률에 의하지 아니하고는 체포·구속·압수·수색 또는 심문을 받지 아니하며, 법률과 적법한 절차에 의하지 아니하고는 처벌·보안처분 또는 강제노역을 받지 아니한다. 국회의 회의는 공개한다. 다만, 출석의원 과반수의 찬성이 있거나 의장이 국가의 안전보장을 위하여 필요하다고 인정할 때에는 공개하지 아니할 수 있다."
+        # Footer
+        pdf.set_font_size(12)
+        pdf.set_y(pdf.h - 40)
+        pdf.line(0, pdf.get_y(), pdf.w, pdf.get_y())
+        pdf.set_y(pdf.get_y() + 5)
+        pdf.set_x(35)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(15, 10, text="Project: ", ln=0, align='L', border="B")
+
+        pdf.set_font_size(12)
+        pdf.set_text_color(70, 70, 70)
+        lines = split_text(project_title, 89, pdf)
+        if len(lines) == 1:
+            pdf.cell(90, 10, text=f"{project_title}",
+                     ln=True, align='L', border="RB")
+        else:
+            pdf.set_font_size(8)
+            new_lines = split_text(project_title, 89, pdf)
+            project_title_1 = new_lines[0]
+            project_title_2 = new_lines[1] + '...'
+            pdf.cell(90, 5, text=f"{project_title_1}",
+                     ln=True, align='L', border="R")
+            pdf.set_x(50)
+            pdf.cell(90, 5, text=f"{project_title_2}",
+                     ln=True, align='L', border="RB")
+        pdf.set_x(35)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(15, 10, text="Bucket: ", ln=0, align='L', border="B")
+        pdf.set_font_size(12)
+        pdf.set_text_color(70, 70, 70)
+        pdf.cell(90, 10, text=f"{bucket_title}",
+                 ln=True, align='L', border="RB")
+        pdf.set_x(35)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(15, 10, text="Date: ", ln=0, align='L')
+        pdf.set_font_size(12)
+        pdf.set_text_color(70, 70, 70)
+        pdf.cell(90, 10, text=f"{date}", ln=0, align='L', border="R")
+        pdf.set_y(pdf.get_y() - 20)
+        pdf.set_x(140)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(15, 10, text=f"Author: ", ln=0, align='L', border="B")
+        pdf.set_x(155)
+        pdf.set_font_size(12)
+        pdf.set_text_color(70, 70, 70)
+        pdf.cell(50, 10, text=f"{author}", ln=True, align='C', border="B")
+        pdf.set_x(140)
+        pdf.set_font_size(10)
+        pdf.set_text_color(157, 1, 1)
+        pdf.cell(20, 10, text=f"Signature: ", ln=True, align='L')
+
+        if signature_url:
+            img_width = 50
+            img_height = 20
+
+            img_x = pdf.w - img_width - 0
+            # Set the y coordinate of the image to the current y coordinate plus the height of the cell
+            img_y = pdf.get_y() - 10
+
+            pdf.image(signature_url, x=img_x, y=img_y,
+                      w=img_width, h=img_height)
+
+        res = pdf.output()
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 410)
+    try:
+        with open(f"{SOURCE_PATH}/output/{note_id}.pdf", 'wb') as f:
+            f.write(res)
+            print(f"{SOURCE_PATH}/output/{note_id}.pdf saved")
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 110)
+
+    return f"{SOURCE_PATH}/output/{note_id}"
+
+# async def generate_pdf(title: str, username: str, note_id: str, description: str | None, files: List[Union[UploadFile, None]], contents: List[Union[bytes, None]], project_title: str, bucket_title: str, signature_url: str | None = None):
+#     SOURCE_PATH = "func/dashboard/pdf_generator"
+#     DOC_EXTENSIONS = ["doc", "docx", "hwp",
+#                       "hwpx", "ppt", "pptx", "xls", "xlsx"]
+#     IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "bmp"]
+#     AVAILABLE_EXTENSIONS = DOC_EXTENSIONS + IMAGE_EXTENSIONS + ["pdf"]
+#     A4_SIZE = (595, 842)
+
+#     # Intro PDF
+#     print(description)
+#     print(files)
+#     create_intro_page(title, username, description,
+#                       SOURCE_PATH, note_id, project_title, bucket_title, signature_url)
+
+#     async def process_file(file, idx):
+#         extension = file.filename.split(".")[-1]
+#         filename = f"{note_id}_{idx}"
+#         try:
+#             with open(f"{SOURCE_PATH}/input/{filename}.{extension}", 'wb') as f:
+#                 f.write(contents[idx])
+#                 print(f"{SOURCE_PATH}/input/{filename}.{extension} saved")
+
+#             if extension in DOC_EXTENSIONS:
+#                 res = convert_doc_to_pdf(SOURCE_PATH, filename, extension)
+#                 print(f"{SOURCE_PATH}/output/{res} saved")
+#             elif extension in IMAGE_EXTENSIONS:
+#                 image = Image.open(
+#                     f"{SOURCE_PATH}/input/{filename}.{extension}")
+#                 image.thumbnail(A4_SIZE)
+#                 if image.mode == "RGBA":
+#                     image.load()
+#                     background = Image.new(
+#                         "RGB", image.size, (255, 255, 255))
+#                     background.paste(image, mask=image.split()[3])
+#                     background.save(f"{SOURCE_PATH}/output/{filename}.pdf")
+#                 else:
+#                     image.save(f"{SOURCE_PATH}/output/{filename}.pdf")
+#                 print(f"{SOURCE_PATH}/output/{filename}.pdf saved")
+#             else:
+#                 # pdf file
+#                 with open(f"{SOURCE_PATH}/output/{filename}.{extension}", 'wb') as f:
+#                     f.write(contents[idx])
+#                     print(f"{SOURCE_PATH}/output/{filename}.pdf saved")
+#         except FileNotFoundError as e:
+#             print(e)
+#             # 이미지 pdf 없음
+#             raise_custom_error(500, 430)
+#         except ValueError as e:
+#             print(e)
+#             # 이미지 pdf 변환 오류
+#             raise_custom_error(500, 430)
+#         except UnidentifiedImageError as e:
+#             print(e)
+#             # PIL 범용 에러
+#             raise_custom_error(500, 430)
+#         except OSError as e:
+#             print(e)
+#             # file 읽기/쓰기 오류
+#             raise_custom_error(500, 110)
+#         except Exception as e:
+#             print(e)
+#             # 그외 에러
+#             raise_custom_error(500, 400)
+
+#     if files:
+#         if not all([file.filename.split(".")[-1] in AVAILABLE_EXTENSIONS for file in files]):
+#             raise HTTPException(
+#                 status_code=422, detail="Unprocessable file extension")
+#         import time
+#         start = time.time()
+#         print("start time", start)
+#         tasks = [process_file(file, idx) for idx, file in enumerate(files)]
+#         await asyncio.gather(*tasks)
+#         end = time.time()
+#         print("end_time", end)
+#         print("time elapsed", end-start)
+
+#     # merge pdfs
+#     try:
+#         pdfs = [f"{SOURCE_PATH}/output/{note_id}_intro.pdf"]
+#         if files:
+#             pdfs = pdfs + \
+#                 [f"{SOURCE_PATH}/output/{note_id}_{idx}.pdf" for idx in range(
+#                     len(files))]
+#         print(pdfs)
+#         pdfmerge(pdfs, f"{SOURCE_PATH}/output/{note_id}.pdf")
+#         print(f"{SOURCE_PATH}/output/{note_id}.pdf saved")
+#     except Exception as e:
+#         print(e)
+#         raise_custom_error(500, 440)
+#         raise HTTPException(
+#             status_code=500, detail="Failed to merge pdfs")
+
+#     # delete files
+#     try:
+#         os.unlink(f"{SOURCE_PATH}/output/{note_id}_intro.pdf")
+#         print(f"{SOURCE_PATH}/output/{note_id}_intro.pdf deleted")
+#         if files:
+#             for idx, file in enumerate(files):
+#                 file_input_path = os.path.join(
+#                     SOURCE_PATH + "/input/", f"{note_id}_{idx}.{file.filename.split('.')[-1]}")
+#                 file_output_path = os.path.join(
+#                     SOURCE_PATH + "/output/", f"{note_id}_{idx}.pdf")
+#                 if os.path.isfile(file_input_path):
+#                     os.unlink(file_input_path)
+#                     print(f"{file_input_path} deleted")
+#                 if os.path.isfile(file_output_path):
+#                     os.unlink(file_output_path)
+#                     print(f"{file_output_path} deleted")
+#     except Exception as e:
+#         print(e)
+#         raise_custom_error(500, 130)
+#     print("Success!")
+
+#     return f"{SOURCE_PATH}/output/{note_id}"
+
+# # # testing
+# # convert_doc_to_pdf("func/dashboard/pdf_generator", "3d4256d9-20e8-4acc-9c51-42c90b4456ab_0", "docx")

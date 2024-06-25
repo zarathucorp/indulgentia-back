@@ -12,6 +12,7 @@ from func.auth.auth import verify_user
 from func.user.team import get_user_team
 from func.error.error import raise_custom_error
 
+
 router = APIRouter(
     prefix="/payment",
     responses={404: {"description": "Not found"}},
@@ -83,7 +84,9 @@ async def confirm_payment(req: Request, request: ConfirmPaymentRequest):
                                 premium_expired_at=expired_at, )
             team_data, count = supabase.table("team").update(paid_team.model_dump(mode="json")).eq("id", user_team_id).execute()
             if not team_data[1]:
-                raise_custom_error(500, 220)
+                raise_custom_error(500, 511)
+                # raise HTTPException(
+                #     status_code=400, detail=f"{error_data['code']}: {error_data['message']}")
 
             payment = response.json()
             order = OrderCreate(team_id=user_team_id, order_no=request.orderId, status=payment["status"], payment_key=payment["paymentKey"], purchase_date=payment["approvedAt"], is_canceled=False, total_amount=payment["totalAmount"], purchase_user_id=user, payment_method=payment["method"], currency=payment["currency"], notes=request.get("notes", None))
@@ -139,3 +142,4 @@ def webhook_order(req: Request, order: OrderWebhook):
         "status": "succeed",
         "data": data[1][0]
     })
+
