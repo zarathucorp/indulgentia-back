@@ -39,6 +39,7 @@ class ConfirmPayment(BaseModel):
 
 
 
+
 @router.post("/confirm-payment", tags=["payment"])
 async def confirm_payment(req: Request, payment: ConfirmPayment):
     user: UUID4 = verify_user(req)
@@ -68,8 +69,8 @@ async def confirm_payment(req: Request, payment: ConfirmPayment):
 
             if response.status_code != 200:
                 error_data = response.json()
-                raise HTTPException(
-                    status_code=500, detail="511")
+                print(error_data)
+                raise_custom_error(500, 511)
 
             payment = response.json()
 
