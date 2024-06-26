@@ -22,6 +22,24 @@ router = APIRouter(
 )
 
 
+@router.get("/team", tags=["payment"])
+def get_team_payment(req: Request):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise_custom_error(403, 213)
+    user_team_id = get_user_team(user)
+    if not user_team_id:
+        raise_custom_error(401, 540)
+    data, count = supabase.table("team").select(
+        "*").eq("id", user_team_id).execute()
+    if not data[1]:
+        raise_custom_error(500, 231)
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data[1][0]
+    })
+
+
 class Payment(BaseModel):
     orderName: str
     approvedAt: str
