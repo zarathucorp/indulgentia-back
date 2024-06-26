@@ -58,6 +58,7 @@ def raise_custom_error(status_code: int, additional_code: int):
             "530": "User is already in team",
             "540": "User is not in any team",
             "550": "Members still exist in this team",
+            "560": "Team membership limit exceeded",
 
             "600": "Unauthorized user access to Team Invite",
             "610": "User already accepted this team invite",

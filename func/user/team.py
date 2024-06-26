@@ -97,3 +97,17 @@ def validate_invite_accepted(invite_id: UUID4):
     except Exception as e:
         print(e)
         raise_custom_error(500, 230)
+
+
+def validate_exceed_max_members(team_id: UUID4):
+    try:
+        data, count = supabase.table(
+            "subscription").select("max_members").eq("team_id", team_id).eq("is_active", True).execute()
+        if not data[1]:
+            return True
+        team_max_members = data[1][0].get('max_members', None)
+        team_user_count = len(get_team_user(team_id))
+        return team_user_count >= team_max_members
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 230)
