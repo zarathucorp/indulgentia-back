@@ -8,6 +8,7 @@ from fastapi import APIRouter
 from env import TOSS_PAYMENT_CLIENT_KEY, TOSS_PAYMENT_SECRET_KEY
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from dateutil import parser
 
 from database.schemas import *
 from database.supabase import supabase
@@ -64,7 +65,8 @@ async def start_payment(req: Request, request: StartPaymentRequest):
     datetime_now = datetime.now()
     current_subscription_data, count = supabase.table("subscription").select("*").eq("team_id", user_team_id).eq("is_active", True).lte("started_at", datetime_now).gte("expired_at", datetime_now).execute()
     if current_subscription_data[1]:
-        started_at = current_subscription_data[1][0]["expired_at"]
+        current_expired_at = parser.parse(current_subscription_data[1][0]["expired_at"])
+        started_at = current_expired_at
         expired_at = started_at + subscription_range - relativedelta(days=1)
     else:
         started_at = datetime.now()

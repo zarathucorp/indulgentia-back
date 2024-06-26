@@ -279,6 +279,7 @@ def send_team_invite_by_email(req: Request, invite: TeamInviteEmailRequest):
     if not validate_user_is_leader(user, UUID(team_id)):
         raise_custom_error(401, 520)
     invited_user_id = get_user_id_by_email(invite.user_email)
+    print(validate_exceed_max_members(UUID(team_id)))
     if validate_exceed_max_members(UUID(team_id)):
         raise_custom_error(401, 560)
     if not validate_user_free(UUID(invited_user_id)):
