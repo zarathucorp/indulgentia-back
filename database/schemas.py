@@ -180,26 +180,25 @@ class Note(NoteBase):
 
 
 class OrderBase(BaseModel):
-    team_id: UUID4
-    order_no: str  # need verification?
-    status: str | None = None
-    payment_key: str
-    purchase_datetime: datetime
+    status: Literal["READY", "IN_PROGRESS", "WAITING_FOR_DEPOSIT", "DONE", "CANCELED", "PARTIAL_CANCELED", "ABORTED", "EXPIRED"]
+    payment_key: str | None = None
+    purchase_datetime: datetime | None = None
     is_canceled: bool = False
     total_amount: int
-    refund_amount: int = 0
     purchase_user_id: UUID4
     payment_method: str | None = None
     currency: str | None = None
-    notes: str | None = None
 
 
 class OrderCreate(OrderBase):
-    pass
+    team_id: UUID4
+    order_no: str  # need verification?
+    refund_amount: int = 0
+    notes: str | None = None
 
 
 class OrderUpdate(OrderBase):
-    id: UUID4
+    pass
 
 
 class Order(OrderBase):
