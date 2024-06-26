@@ -72,7 +72,6 @@ async def confirm_payment(req: Request, payment: ConfirmPayment):
                     status_code=500, detail="511")
 
             payment = response.json()
-        raise Exception("test")
 
 
     except httpx.HTTPError as exc:
