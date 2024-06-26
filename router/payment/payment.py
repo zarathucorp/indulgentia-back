@@ -6,6 +6,9 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi import APIRouter
 from env import TOSS_PAYMENT_CLIENT_KEY, TOSS_PAYMENT_SECRET_KEY
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
 from database.schemas import *
 from database.supabase import supabase
 from func.auth.auth import verify_user
@@ -29,22 +32,22 @@ class Payment(BaseModel):
     orderId: str
 
 
-class ConfirmPaymentRequest(BaseModel):
+class ConfirmPayment(BaseModel):
     paymentKey: str
     orderId: str
     amount: int
-    premium_started_at: date
-    premium_expired_at: date
-    max_members: int
 
 
 
-@router.post("/confirm-payment/", tags=["payment"])
-async def confirm_payment(req: Request, request: ConfirmPaymentRequest):
+
+@router.post("/confirm-payment", tags=["payment"])
+async def confirm_payment(req: Request, payment: ConfirmPayment):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
     user_team_id = get_user_team(user)
+    if not user_team_id:
+        raise_custom_error(401, 540)
     # if TOSS_PAYMENT_SECRET_KEY is None:
     #     return {"error": "TOSS_PAYMENT_SECRET_KEY is not set"}
     TOSS_PAYMENT_SECRET_KEY = "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6"
@@ -58,47 +61,87 @@ async def confirm_payment(req: Request, request: ConfirmPaymentRequest):
                     "Content-Type": "application/json",
                 },
                 json={
-                    "paymentKey": request.paymentKey,
-                    "orderId": request.orderId,
-                    "amount": request.amount,
+                    "paymentKey": payment.paymentKey,
+                    "orderId": payment.orderId,
+                    "amount": payment.amount,
                 },
             )
 
             if response.status_code != 200:
                 error_data = response.json()
-                raise HTTPException(
-                    status_code=500, detail="511")
-
-            # started_at, expired_at dummy data, need to be updated
-            from datetime import datetime
-            from dateutil.relativedelta import relativedelta
-            today = datetime.today()
-            next_month = today + relativedelta(months=1)
-            started_at = next_month.replace(day=1).strftime("%Y-%m-%d")
-            # started_at = request.get("premium_started_at", None)
-            month_after_next = today + relativedelta(months=2)
-            expired_at = month_after_next.replace(day=1).strftime("%Y-%m-%d")
-            # expired_at = request.get("premium_expired_at", None)
-
-            paid_team = TeamPay(team_id=user_team_id, is_premium=True, premium_started_at=started_at,
-                                premium_expired_at=expired_at, )
-            team_data, count = supabase.table("team").update(paid_team.model_dump(mode="json")).eq("id", user_team_id).execute()
-            if not team_data[1]:
+                print(error_data)
                 raise_custom_error(500, 511)
-                # raise HTTPException(
-                #     status_code=400, detail=f"{error_data['code']}: {error_data['message']}")
 
             payment = response.json()
-            order = OrderCreate(team_id=user_team_id, order_no=request.orderId, status=payment["status"], payment_key=payment["paymentKey"], purchase_date=payment["approvedAt"], is_canceled=False, total_amount=payment["totalAmount"], purchase_user_id=user, payment_method=payment["method"], currency=payment["currency"], notes=request.get("notes", None))
-            order_data, count = supabase.table("order").insert(order.model_dump(mode="json")).execute()
-            if not order_data[1]:
-                raise_custom_error(500, 210)
-            return JSONResponse(content={"status": "succeed", "data": {"team": team_data[1][0], "order": order_data[1][0]}})
+
 
     except httpx.HTTPError as exc:
         print(exc)
+        fail_team_data, count = supabase.table("team").update({"is_premium": False, "premium_started_at": None, "premium_expired_at": None, "max_members": None}).eq("id", user_team_id).execute()
+        fail_order_data, count = supabase.table("order").update({"status": "ABORTED", "is_canceled": True}).eq("order_no", payment["orderId"]).execute()
+        print(fail_team_data)
+        print(fail_order_data)
         raise_custom_error(500, 510)
+    except Exception as e:
+        print(e)
+        fail_team_data, count = supabase.table("team").update({"is_premium": False, "premium_started_at": None, "premium_expired_at": None, "max_members": None}).eq("id", user_team_id).execute()
+        fail_order_data, count = supabase.table("order").update({"status": "ABORTED", "is_canceled": True}).eq("order_no", payment["orderId"]).execute()
+        print(fail_team_data)
+        print(fail_order_data)
+        raise_custom_error(500,500)
 
+    # order = OrderCreate(team_id=user_team_id, order_no=payment.orderId, status=payment["status"], payment_key=payment["paymentKey"], purchase_datetime=payment["approvedAt"], is_canceled=False, total_amount=payment["totalAmount"], purchase_user_id=user, payment_method=payment["method"], currency=payment["currency"], notes=payment.note)
+    order = OrderUpdate(status=payment["status"], payment_key=payment["paymentKey"], purchase_datetime=payment["approvedAt"], total_amount=payment["totalAmount"], purchase_user_id=user, payment_method=payment["method"], currency=payment["currency"])
+    order_data, count = supabase.table("order").update(order.model_dump(mode="json")).eq("order_no", payment["orderId"]).execute()
+    if not order_data[1]:
+        raise_custom_error(500, 220)
+    # order_data = (None, [{"id": "test"}])
+    return JSONResponse(content={"status": "succeed", "data": {"order": order_data[1][0], "payment": payment}})
+
+
+class StartPaymentRequest(BaseModel):
+    orderId: str
+    amount: int
+    is_annual: bool = True
+    max_members: int
+    note: str | None = None
+
+
+@router.post("/start-payment", tags=["payment"])
+async def start_payment(req: Request, request: StartPaymentRequest):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise_custom_error(403, 213)
+    user_team_id = get_user_team(user)
+    if not user_team_id:
+        raise_custom_error(401, 540)
+
+    started_at = datetime.now()
+    # started_at = request.get("premium_started_at", None)
+    if request.is_annual:
+        expired_at = started_at + relativedelta(years=1) - relativedelta(days=1)
+    else:
+        expired_at = started_at + relativedelta(months=1) - relativedelta(days=1)
+    # expired_at = request.get("premium_expired_at", None)
+
+    # raise Exception(started_at, expired_at)
+    paid_team = TeamPay(id=user_team_id, is_premium=True, premium_started_at=started_at,
+                        premium_expired_at=expired_at, max_members=request.max_members)
+    team_data, count = supabase.table("team").update(paid_team.model_dump(mode="json")).eq("id", user_team_id).execute()
+    if not team_data[1]:
+        raise_custom_error(500, 511)
+        # raise HTTPException(
+        #     status_code=400, detail=f"{error_data['code']}: {error_data['message']}")
+
+    user_team_id = get_user_team(user)
+    order = OrderCreate(team_id=user_team_id, order_no=request.orderId, status="READY", payment_key=None, purchase_datetime=None, is_canceled=False, total_amount=request.amount, purchase_user_id=user, payment_method=None, currency=None, notes=request.note)
+    data, count = supabase.table("order").insert(order.model_dump(mode="json")).execute()
+    if not data[1]:
+        raise_custom_error(500, 210)
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data[1][0]
+    })
 
 @router.get("/receipt/list", tags=["payment"])
 async def get_invoice_list(req: Request):
