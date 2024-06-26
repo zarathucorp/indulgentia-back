@@ -152,7 +152,8 @@ def accept_team_invite(req: Request, team_id: str, invite: TeamInviteRequest):
         raise_custom_error(403, 213)
     if not validate_user_free(user):
         raise_custom_error(401, 530)
-
+    if validate_exceed_max_members(UUID(team_id)):
+        raise_custom_error(401, 560)
     is_invite_accepted = validate_invite_accepted(invite.invite_id)
     if is_invite_accepted == False:
         invite_data, count = supabase.table("team_invite").update({"is_deleted": True}).eq(
@@ -278,6 +279,9 @@ def send_team_invite_by_email(req: Request, invite: TeamInviteEmailRequest):
     if not validate_user_is_leader(user, UUID(team_id)):
         raise_custom_error(401, 520)
     invited_user_id = get_user_id_by_email(invite.user_email)
+    print(validate_exceed_max_members(UUID(team_id)))
+    if validate_exceed_max_members(UUID(team_id)):
+        raise_custom_error(401, 560)
     if not validate_user_free(UUID(invited_user_id)):
         raise_custom_error(401, 530)
     check_team_invite_data, count = supabase.table("team_invite").select(

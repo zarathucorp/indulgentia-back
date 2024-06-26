@@ -1,6 +1,7 @@
 import json
 from pydantic import UUID4
 from fastapi import HTTPException
+from datetime import datetime
 
 from database.supabase import supabase
 from database import schemas
@@ -94,6 +95,21 @@ def validate_invite_accepted(invite_id: UUID4):
         if not data[1]:
             raise_custom_error(500, 231)
         return data[1][0].get('is_accepted')
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 230)
+
+
+def validate_exceed_max_members(team_id: UUID4):
+    try:
+        datetime_now = datetime.now()
+        data, count = supabase.table(
+            "subscription").select("max_members").eq("team_id", team_id).eq("is_active", True).lte("started_at", datetime_now).gte("expired_at", datetime_now).execute()
+        if not data[1]:
+            return True
+        team_max_members = data[1][0].get('max_members', None)
+        team_user_count = len(get_team_user(team_id))
+        return team_user_count >= team_max_members
     except Exception as e:
         print(e)
         raise_custom_error(500, 230)

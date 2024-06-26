@@ -230,7 +230,6 @@ class CreateSignature(BaseModel):
 
 class TeamBase(BaseModel):
     name: str
-    is_premium: bool = False
 
 
 class TeamCreate(TeamBase):
@@ -241,10 +240,18 @@ class TeamUpdate(TeamBase):
     pass
 
 
-class TeamPay(BaseModel):
-    id: UUID4
-    is_premium: bool = True
-    premium_started_at: datetime
-    premium_expired_at: datetime
+class SubscriptionBase(BaseModel):
+    team_id: UUID4
+    started_at: datetime
+    expired_at: datetime
     max_members: int
-    
+    is_active: bool = False
+    order_no: str
+
+
+class SubscriptionCreate(SubscriptionBase):
+    pass
+
+
+class SubscriptionUpdate(SubscriptionBase):
+    pass
