@@ -72,13 +72,12 @@ async def confirm_payment(req: Request, request: ConfirmPaymentRequest):
                 raise HTTPException(
                     status_code=500, detail="511")
 
-            today = datetime.today()
-            started_at = today.strftime("%Y-%m-%d")
+            started_at = datetime.now()
             # started_at = request.get("premium_started_at", None)
-            after_month = today + relativedelta(months=1)
-            expired_at = after_month.strftime("%Y-%m-%d")
+            expired_at = started_at + relativedelta(months=1) - relativedelta(days=1)
             # expired_at = request.get("premium_expired_at", None)
 
+            # raise Exception(started_at, expired_at)
             paid_team = TeamPay(id=user_team_id, is_premium=True, premium_started_at=started_at,
                                 premium_expired_at=expired_at, max_members=request.max_members)
             team_data, count = supabase.table("team").update(paid_team.model_dump(mode="json")).eq("id", user_team_id).execute()
@@ -88,11 +87,13 @@ async def confirm_payment(req: Request, request: ConfirmPaymentRequest):
                 #     status_code=400, detail=f"{error_data['code']}: {error_data['message']}")
 
             payment = response.json()
+
             order = OrderCreate(team_id=user_team_id, order_no=request.orderId, status=payment["status"], payment_key=payment["paymentKey"], purchase_datetime=payment["approvedAt"], is_canceled=False, total_amount=payment["totalAmount"], purchase_user_id=user, payment_method=payment["method"], currency=payment["currency"], notes=request.note)
             order_data, count = supabase.table("order").insert(order.model_dump(mode="json")).execute()
             if not order_data[1]:
                 raise_custom_error(500, 210)
-            return JSONResponse(content={"status": "succeed", "data": {"team": team_data[1][0], "order": order_data[1][0]}})
+            # order_data = (None, [{"id": "test"}])
+            return JSONResponse(content={"status": "succeed", "data": {"team": team_data[1][0], "order": order_data[1][0], "payment": payment}})
 
     except httpx.HTTPError as exc:
         print(exc)

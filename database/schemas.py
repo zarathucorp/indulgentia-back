@@ -245,7 +245,7 @@ class TeamUpdate(TeamBase):
 class TeamPay(BaseModel):
     id: UUID4
     is_premium: bool = True
-    premium_started_at: date
-    premium_expired_at: date
+    premium_started_at: datetime
+    premium_expired_at: datetime
     max_members: int
     
