@@ -186,7 +186,7 @@ class OrderBase(BaseModel):
     is_canceled: bool = False
     total_amount: int
     purchase_user_id: UUID4
-    payment_method: str | None = None
+    payment_method: Literal["카드", "가상계좌", "간편결제", "휴대폰", "계좌이체", "문화상품권", "도서문화상품권", "게임문화상품권"] | None = None
     currency: str | None = None
 
 

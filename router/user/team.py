@@ -51,7 +51,7 @@ def get_user_team_req(req: Request):
             "status": "succeed",
             "data": None
         })
-        raise_custom_error(401, 540)
+        # raise_custom_error(401, 540)
     else:
         data, count = supabase.table("team").select(
             "*").eq("is_deleted", False).eq("id", user_team_id).execute()
