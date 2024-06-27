@@ -30,6 +30,8 @@ async def get_project_list(req: Request, team_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     if not verify_team(user, team_id):
         raise_custom_error(401, 510)
     res = read_project_list(team_id)
@@ -44,6 +46,8 @@ async def get_project_list_by_current_user(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     data, count = supabase.table("user_setting").select(
         "team_id").eq("id", user).execute()
     if not data[1]:
@@ -69,6 +73,8 @@ async def get_project(req: Request, project_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     data, count = supabase.rpc(
         "verify_project", {"user_id": str(user), "project_id": project_id}).execute()
     if not data[1]:
@@ -88,6 +94,8 @@ async def add_project(req: Request, project: schemas.ProjectCreate):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     if not verify_team(user, project.team_id):
         raise_custom_error(401, 510)
     res = create_project(project)
@@ -104,6 +112,8 @@ async def change_project(req: Request, project: schemas.ProjectUpdate):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     data, count = supabase.rpc("verify_project", {
                                "user_id": str(user), "project_id": str(project.id)}).execute()
     if not data[1]:
@@ -130,6 +140,8 @@ async def drop_project(req: Request, project_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     data, count = supabase.rpc(
         "verify_project", {"user_id": str(user), "project_id": project_id}).execute()
     if not data[1]:

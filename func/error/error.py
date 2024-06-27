@@ -69,6 +69,8 @@ def raise_custom_error(status_code: int, additional_code: int):
             "710": "User is not in this order",
 
             "800": "Unauthorized user access to Subscription",
+            "810": "User is not in this subscription",
+            "820": "User is not in premium team",
         },
 
         # 403 Forbidden
