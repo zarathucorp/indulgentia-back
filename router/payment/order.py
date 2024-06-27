@@ -28,7 +28,7 @@ def get_team_subscription(req: Request):
     datetime_now = datetime.now()
     data, count = supabase.table("subscription").select("*").eq("team_id", user_team_id).eq("is_active", True).lte("started_at", datetime_now).gte("expired_at", datetime_now).execute()
     if not data[1]:
-        res = []
+        res = None
     else:
         res = data[1][0]
     return JSONResponse(content={
