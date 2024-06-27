@@ -81,12 +81,12 @@ async def start_payment(req: Request, request: StartPaymentRequest):
 
     user_team_id = get_user_team(user)
     order = OrderCreate(team_id=user_team_id, order_no=request.orderId, status="READY", payment_key=None, purchase_datetime=None, is_canceled=False, total_amount=request.amount, purchase_user_id=user, payment_method=None, currency=None, notes=request.note)
-    data, count = supabase.table("order").insert(order.model_dump(mode="json")).execute()
-    if not data[1]:
+    order_data, count = supabase.table("order").insert(order.model_dump(mode="json")).execute()
+    if not order_data[1]:
         raise_custom_error(500, 210)
     return JSONResponse(content={
         "status": "succeed",
-        "data": data[1][0]
+        "data": {"order": order_data[1][0], "subscription": subscription_data[1][0]}
     })
 
 
