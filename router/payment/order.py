@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi import APIRouter
+from datetime import datetime
 
 from database.schemas import *
 from database.supabase import supabase
@@ -23,13 +24,16 @@ def get_team_subscription(req: Request):
     user_team_id = get_user_team(user)
     if not user_team_id:
         raise_custom_error(401, 540)
-    data, count = supabase.table("subscription").select(
-        "*").eq("team_id", user_team_id).execute()
+
+    datetime_now = datetime.now()
+    data, count = supabase.table("subscription").select("*").eq("team_id", user_team_id).eq("is_active", True).lte("started_at", datetime_now).gte("expired_at", datetime_now).execute()
     if not data[1]:
-        raise_custom_error(500, 231)
+        res = []
+    else:
+        res = data[1][0]
     return JSONResponse(content={
         "status": "succeed",
-        "data": data[1][0]
+        "data": res
     })
 
 
