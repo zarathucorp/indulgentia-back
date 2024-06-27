@@ -169,8 +169,8 @@ async def confirm_payment(req: Request, payment: ConfirmPayment):
 
 
 
-@router.get("/receipt/list", tags=["payment"])
-async def get_invoice_list(req: Request):
+@router.get("/order/list", tags=["payment"])
+async def get_order_list(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
@@ -183,8 +183,8 @@ async def get_invoice_list(req: Request):
     })
 
 
-@router.get("/receipt/{order_no}", tags=["payment"])
-async def get_invoice(req: Request, order_no: str):
+@router.get("/order/{order_no}", tags=["payment"])
+async def get_order(req: Request, order_no: str):
     user: UUID4 = verify_user(req)
     user_team_id = get_user_team(user)
     data, count = supabase.table("order").select(
