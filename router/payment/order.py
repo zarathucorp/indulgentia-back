@@ -39,7 +39,9 @@ async def get_order_list(req: Request):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
-    user_team_id = get_user_team(user)
+    user_team_id = get_user_team(user)    
+    if not user_team_id:
+        raise_custom_error(401, 540)
     data, count = supabase.table("order").select(
         "*").eq("team_id", user_team_id).order("created_at", desc=True).execute()
     return JSONResponse(content={
@@ -51,7 +53,9 @@ async def get_order_list(req: Request):
 @router.get("/{order_no}", tags=["order"])
 async def get_order(req: Request, order_no: str):
     user: UUID4 = verify_user(req)
-    user_team_id = get_user_team(user)
+    user_team_id = get_user_team(user)    
+    if not user_team_id:
+        raise_custom_error(401, 540)
     data, count = supabase.table("order").select(
         "*").eq("team_id", user_team_id).eq("order_no", order_no).execute()
     if not data[1]:

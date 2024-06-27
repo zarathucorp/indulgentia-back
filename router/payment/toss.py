@@ -61,6 +61,8 @@ async def start_payment(req: Request, request: StartPaymentRequest):
         #     status_code=400, detail=f"{error_data['code']}: {error_data['message']}")
 
     user_team_id = get_user_team(user)
+    if not user_team_id:
+        raise_custom_error(401, 540)
     order = OrderCreate(team_id=user_team_id, order_no=request.orderId, status="READY", payment_key=None, purchase_datetime=None, is_canceled=False, total_amount=request.amount, purchase_user_id=user, payment_method=None, currency=None, notes=request.note)
     order_data, count = supabase.table("order").insert(order.model_dump(mode="json")).execute()
     if not order_data[1]:
