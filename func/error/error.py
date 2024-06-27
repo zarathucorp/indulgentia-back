@@ -64,6 +64,11 @@ def raise_custom_error(status_code: int, additional_code: int):
             "610": "User already accepted this team invite",
             "620": "User already rejected this team invite",
             "630": "Team invite request still exists",
+
+            "700": "Unauthorized user access to Order",
+            "710": "User is not in this order",
+
+            "800": "Unauthorized user access to Subscription",
         },
 
         # 403 Forbidden
