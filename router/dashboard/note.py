@@ -18,6 +18,7 @@ from func.note_handling.pdf_sign import sign_pdf
 from func.note_handling.pdf_verify import verify_pdf
 from cloud.azure.confidential_lendger import write_ledger, read_ledger, get_ledger_receipt
 from func.error.error import raise_custom_error
+from func.user.team import validate_user_in_premium_team
 
 
 router = APIRouter(
@@ -43,6 +44,8 @@ async def get_note_list(req: Request, bucket_id: str):
     if not data[1]:
         raise_custom_error(401, 310)
     res = read_note_list(bucket_id)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     return JSONResponse(content={
         "status": "succeed",
         "data": res
@@ -68,6 +71,8 @@ async def get_note(req: Request, note_id: str):
     if not data[1]:
         raise_custom_error(401, 410)
     res = read_note_detail(note_id)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     return JSONResponse(content={
         "status": "succeed",
         "data": res
@@ -91,6 +96,8 @@ async def add_note(req: Request,
     note_id = uuid.uuid4()
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     verify_bucket_data, count = supabase.rpc(
         "verify_bucket", {"user_id": str(user), "bucket_id": str(bucket_id)}).execute()
     if not verify_bucket_data[1]:
@@ -177,6 +184,8 @@ async def change_note(req: Request, note: schemas.NoteUpdate):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     if not user == note.user_id:
         raise_custom_error(401, 420)
 
@@ -200,6 +209,8 @@ async def drop_note(req: Request, note_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     data, count = supabase.table("note").select(
         "user_id").eq("id", note_id).execute()
     if not data[1]:
@@ -238,6 +249,8 @@ async def get_note_file(req: Request, note_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     # generate_presigned_url 오류 시 500 에러 발생
     try:
         url = generate_presigned_url(note_id + ".pdf")
@@ -257,6 +270,8 @@ async def get_breadcrumb(req: Request, note_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     data, count = supabase.rpc(
         "note_breadcrumb_data", {"note_id": note_id}).execute()
     if not data[1]:
@@ -317,8 +332,11 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
     for idx, row in enumerate(data[1]):
         note_id = uuid.uuid4()
         note_id_string = str(note_id)
+        user_id = row.get("user_id")
+        if not validate_user_in_premium_team(user):
+            raise_custom_error(401, 820)
         user_data, count = supabase.table("user_setting").select(
-            "*").eq("id", row.get("user_id")).execute()
+            "*").eq("id", user_id).execute()
         has_signature = user_data[1][0].get("has_signature")
         if has_signature:
             url = generate_presigned_url(
@@ -448,6 +466,8 @@ def verify_note_pdf_with_note_id(req: Request, note_id: str, file: UploadFile = 
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     if not file or not file.content_type == "application/pdf":
         raise_custom_error(422, 240)
     file_hash = hashlib.sha256(file.file.read()).hexdigest()

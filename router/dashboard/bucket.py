@@ -7,6 +7,7 @@ from database import schemas
 from func.dashboard.crud.bucket import *
 from func.auth.auth import *
 from func.error.error import raise_custom_error
+from func.user.team import validate_user_in_premium_team
 
 
 router = APIRouter(
@@ -27,6 +28,8 @@ async def get_bucket_list(req: Request, project_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     data, count = supabase.rpc(
         "verify_project", {"user_id": str(user), "project_id": project_id}).execute()
     if not data[1]:
@@ -49,6 +52,8 @@ async def get_bucket(req: Request, bucket_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     data, count = supabase.rpc(
         "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     if not data[1]:
@@ -69,6 +74,8 @@ async def add_bucket(req: Request, bucket: schemas.BucketCreate):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     data, count = supabase.rpc("verify_project", {"user_id": str(
         user), "project_id": str(bucket.project_id)}).execute()
     if not data[1]:
@@ -87,6 +94,8 @@ async def change_bucket(req: Request, bucket: schemas.BucketUpdate):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     # if not user == bucket.manager_id:
         # raise_custom_error(401, 320)
     res = update_bucket(bucket)
@@ -107,6 +116,8 @@ async def drop_bucket(req: Request, bucket_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     data, count = supabase.table("bucket").select(
         "manager_id").eq("id", bucket_id).execute()
     if not data[1]:
@@ -149,6 +160,8 @@ async def get_breadcrumb(req: Request, bucket_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     data, count = supabase.rpc(
         "bucket_breadcrumb_data", {"bucket_id": bucket_id}).execute()
     if not data[1]:
@@ -168,6 +181,8 @@ async def get_connected_github_repositories(req: Request, bucket_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
         # raise HTTPException(status_code=401, detail="Unauthorized")
     data = get_connected_gitrepo(uuid.UUID(bucket_id))
     verify_data, count = supabase.rpc(
@@ -189,6 +204,8 @@ async def connect_github_repository(req: Request, bucket_id: str, newRepo: schem
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     verify_data, count = supabase.rpc(
         "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     if not verify_data[1]:
@@ -214,6 +231,8 @@ async def disconnect_github_repository(req: Request, bucket_id: str, repo_id: st
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
     verify_data, count = supabase.rpc(
         "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     if not verify_data[1]:

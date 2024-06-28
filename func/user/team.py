@@ -113,3 +113,18 @@ def validate_exceed_max_members(team_id: UUID4):
     except Exception as e:
         print(e)
         raise_custom_error(500, 230)
+
+def validate_user_in_premium_team(user_id: UUID4):
+    team_id = get_user_team(user_id)
+    if not team_id:
+        raise_custom_error(401, 540)
+    print(team_id)
+    try:
+        datetime_now = datetime.now()
+        data, count = supabase.table(
+            "subscription").select("*").eq("team_id", team_id).eq("is_active", True).lte("started_at", datetime_now).gte("expired_at", datetime_now).execute()
+        print(data)
+        return not not data[1]
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 230)
