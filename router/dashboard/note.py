@@ -333,7 +333,8 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
         note_id = uuid.uuid4()
         note_id_string = str(note_id)
         user_id = row.get("user_id")
-        if not validate_user_in_premium_team(user):
+        if not validate_user_in_premium_team(user_id):
+            # break
             raise_custom_error(401, 820)
         user_data, count = supabase.table("user_setting").select(
             "*").eq("id", user_id).execute()
