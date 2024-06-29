@@ -1,5 +1,5 @@
 FROM ubuntu:jammy
-LABEL Zarathu Corporation
+LABEL maintainer=ChangwooLim
 
 ENV TZ="Asia/Seoul"
 ENV DEBIAN_FRONTEND=noninteractive
