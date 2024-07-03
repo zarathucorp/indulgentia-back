@@ -6,8 +6,10 @@ from typing import Annotated, List
 from pydantic import BaseModel
 import jwt
 
-from database import schemas
+from database.schemas import *
 from database.supabase import supabase
+from func.auth.auth import verify_user
+from func.error.error import raise_custom_error
 
 
 router = APIRouter(
@@ -46,6 +48,13 @@ router = APIRouter(
 #     pass
 
 
-# @router.get("/drop")
-# def drop():
-#     pass
+@router.delete("/remove", tags=["auth"])
+def remove_user(req: Request):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise_custom_error(403, 213)
+    supabase.auth.admin.delete_user(id=user, should_soft_delete=True)
+    return JSONResponse(content={
+        "status": "succeed"
+    })
+    
