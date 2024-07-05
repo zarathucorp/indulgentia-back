@@ -85,7 +85,7 @@ def verify_user(req: Request) -> UUID4:
 def verify_team(user_id: UUID4, team_id: UUID4) -> bool:
     # Left
     data, count = supabase.table("user_setting").select(
-        "team_id").eq("id", user_id).execute()
+        "team_id").eq("is_deleted", False).eq("id", user_id).execute()
     if not data[1]:
         raise_custom_error(500, 231)
     left_team_id = uuid.UUID(data[1][0].get("team_id"))

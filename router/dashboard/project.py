@@ -49,7 +49,7 @@ async def get_project_list_by_current_user(req: Request):
     if not validate_user_in_premium_team(user):
         raise_custom_error(401, 820)
     data, count = supabase.table("user_setting").select(
-        "team_id").eq("id", user).execute()
+        "team_id").eq("is_deleted", False).eq("id", user).execute()
     if not data[1]:
         raise_custom_error(500, 231)
     if not data[1][0].get("team_id"):
