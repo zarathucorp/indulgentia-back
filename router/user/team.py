@@ -17,6 +17,27 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+@router.get("/number", tags=["team"])
+def get_team_user_number_including_pending(req: Request):
+    user: UUID4 = verify_user(req)
+    if not user:
+        raise_custom_error(403, 213)
+    user_team_id = get_user_team(user)
+    if not user_team_id:
+        raise_custom_error(401, 540)
+    try:
+        user_team_id_uuid = UUID(user_team_id)
+    except ValueError:
+        raise_custom_error(422, 210)
+    data, count = supabase.rpc("get_team_user_count", {"u_team_id": str(user_team_id)}).execute()
+    if not data[1]:
+        raise_custom_error(500, 250)
+    
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": data[1]
+    })
+
 
 @router.get("/list", tags=["team"])
 def get_team_user_list(req: Request):
