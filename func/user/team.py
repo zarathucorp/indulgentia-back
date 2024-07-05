@@ -11,7 +11,7 @@ from func.error.error import raise_custom_error
 def get_user_team(user_id: UUID4):
     try:
         data, count = supabase.table(
-            "user_setting").select("team_id").eq("id", user_id).execute()
+            "user_setting").select("team_id").eq("is_deleted", False).eq("id", user_id).execute()
         if not data[1]:
             raise_custom_error(500, 231)
         return data[1][0].get('team_id', None)
@@ -23,7 +23,7 @@ def get_user_team(user_id: UUID4):
 def get_team_user(team_id: UUID4):
     try:
         data, count = supabase.table(
-            "user_setting").select("id", "email", "first_name", "last_name").eq("team_id", team_id).execute()
+            "user_setting").select("id", "email", "first_name", "last_name").eq("is_deleted", False).eq("team_id", team_id).execute()
         if not data[1]:
             raise_custom_error(500, 232)
         return data[1]
@@ -35,7 +35,7 @@ def get_team_user(team_id: UUID4):
 def get_user_id_by_email(email: str):
     try:
         data, count = supabase.table(
-            "user_setting").select("id").eq("email", email).execute()
+            "user_setting").select("id").eq("is_deleted", False).eq("email", email).execute()
         if not data[1]:
             raise_custom_error(500, 231)
         return data[1][0].get('id', None)
@@ -47,7 +47,7 @@ def get_user_id_by_email(email: str):
 def validate_user_in_team(user_id: UUID4, team_id: UUID4):
     try:
         data, count = supabase.table(
-            "user_setting").select("team_id").eq("id", user_id).execute()
+            "user_setting").select("team_id").eq("is_deleted", False).eq("id", user_id).execute()
         if not data[1]:
             return False
         if data[1][0].get('team_id', None) != str(team_id):
@@ -62,7 +62,7 @@ def validate_user_in_team(user_id: UUID4, team_id: UUID4):
 def validate_user_free(user_id: UUID4):
     try:
         data, count = supabase.table(
-            "user_setting").select("team_id").eq("id", user_id).execute()
+            "user_setting").select("team_id").eq("is_deleted", False).eq("id", user_id).execute()
         if not data[1]:
             return True
         if data[1][0].get('team_id', None):
@@ -91,7 +91,7 @@ def validate_user_is_leader(user_id: UUID4, team_id: UUID4):
 def validate_invite_accepted(invite_id: UUID4):
     try:
         data, count = supabase.table(
-            "team_invite").select("is_accepted").eq("id", invite_id).execute()
+            "team_invite").select("is_accepted").eq("is_deleted", False).eq("id", invite_id).execute()
         if not data[1]:
             raise_custom_error(500, 231)
         return data[1][0].get('is_accepted')

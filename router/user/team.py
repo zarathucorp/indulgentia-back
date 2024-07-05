@@ -79,7 +79,7 @@ def make_team(req: Request, team: schemas.TeamCreate):
         raise_custom_error(500, 210)
     team_id = team_data[1][0].get("id")
     user_data, count = supabase.table("user_setting").update(
-        {"team_id": team_id}).eq("id", user).execute()
+        {"team_id": team_id}).eq("is_deleted", False).eq("id", user).execute()
     if not user_data[1]:
         raise_custom_error(500, 220)
     return JSONResponse(content={
@@ -169,7 +169,7 @@ def accept_team_invite(req: Request, team_id: str, invite: TeamInviteRequest):
         if not team_invite_data[1]:
             raise_custom_error(500, 220)
         # change to trigger in supabase
-        user_data, count = supabase.table("user_setting").update(
+        user_data, count = supabase.table("user_setting").eq("is_deleted", False).update(
             {"team_id": team_id}).eq("id", user).execute()
         if not user_data[1]:
             raise_custom_error(500, 220)
@@ -227,7 +227,7 @@ def exit_team(req: Request, team_id: str):
     if validate_user_is_leader(user, UUID(team_id)) and len(get_team_user(UUID(team_id))) > 1:
         raise_custom_error(401, 550)
     data, count = supabase.table("user_setting").update(
-        {"team_id": None}).eq("id", user).execute()
+        {"team_id": None}).eq("is_deleted", False).eq("id", user).execute()
     if not data[1]:
         raise_custom_error(500, 242)
     res = data[1][0]
@@ -255,7 +255,7 @@ def drop_team(req: Request, team_id: str):
     if not team_data[1]:
         raise_custom_error(500, 242)
     user_data, count = supabase.table("user_setting").update(
-        {"team_id": None}).eq("team_id", team_id).execute()
+        {"team_id": None}).eq("is_deleted", False).eq("team_id", team_id).execute()
     if not user_data[1]:
         raise_custom_error(500, 242)
     return JSONResponse(content={

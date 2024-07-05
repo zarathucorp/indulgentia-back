@@ -62,7 +62,7 @@ async def add_signature_file(req: Request, file: UploadFile = File(...)):
     res = upload_blob(data, blob_name)
     if res:
         data, count = supabase.table("user_setting").update(
-            {"has_signature": True}).eq("id", user).execute()
+            {"has_signature": True}).eq("is_deleted", False).eq("id", user).execute()
         if not data[1]:
             raise_custom_error(500, 220)
         return JSONResponse(content={
@@ -91,7 +91,7 @@ async def add_signature(req: Request, signature: schemas.CreateSignature):
 
     if res:
         data, count = supabase.table("user_setting").update(
-            {"has_signature": True}).eq("id", user).execute()
+            {"has_signature": True}).eq("is_deleted", False).eq("id", user).execute()
         if not data[1]:
             raise_custom_error(500, 220)
         return JSONResponse(content={
@@ -112,14 +112,14 @@ async def drop_signature(req: Request):
         raise_custom_error(403, 213)
 
     data, count = supabase.table("user_setting").select(
-        "has_signature").eq("id", user).execute()
+        "has_signature").eq("is_deleted", False).eq("id", user).execute()
     if not data[1]:
         raise_custom_error(500, 231)
     blob_name = str(user) + ".png"
     res = delete_blob(blob_name)
     if res:
         data, count = supabase.table("user_setting").update(
-            {"has_signature": False}).eq("id", user).execute()
+            {"has_signature": False}).eq("is_deleted", False).eq("id", user).execute()
         if not data[1]:
             raise_custom_error(500, 242)
         return JSONResponse(content={
@@ -140,7 +140,7 @@ def get_user_info(req: Request):
     if not user:
         raise_custom_error(403, 213)
     data, count = supabase.table("user_setting").select(
-        "id", "first_name", "last_name", "email").eq("id", user).execute()
+        "id", "first_name", "last_name", "email").eq("is_deleted", False).eq("id", user).execute()
     if not data[1]:
         raise_custom_error(500, 231)
     return JSONResponse(content={
@@ -155,7 +155,7 @@ async def update_user_info(req: Request, user_info: schemas.UserUpdate):
     if not user:
         raise_custom_error(403, 213)
     data, count = supabase.table("user_setting").update(
-        {"first_name": user_info.first_name, "last_name": user_info.last_name}).eq("id", user).execute()
+        {"first_name": user_info.first_name, "last_name": user_info.last_name}).eq("is_deleted", False).eq("id", user).execute()
     if not data[1]:
         raise_custom_error(500, 220)
     return JSONResponse(content={
@@ -187,7 +187,7 @@ def get_github_token(req: Request):
     if not user:
         raise_custom_error(403, 213)
     data, count = supabase.table("user_setting").select(
-        "github_token").eq("id", user).execute()
+        "github_token").eq("is_deleted", False).eq("id", user).execute()
     if not data[1]:
         raise_custom_error(500, 231)
     return JSONResponse(content={
@@ -221,7 +221,7 @@ def drop_github_token(req: Request):
     if not user:
         raise_custom_error(403, 213)
     data, count = supabase.table("user_setting").update(
-        {"github_token": None}).eq("id", user).execute()
+        {"github_token": None}).eq("is_deleted", False).eq("id", user).execute()
     if not data[1]:
         raise_custom_error(500, 242)
     return JSONResponse(content={

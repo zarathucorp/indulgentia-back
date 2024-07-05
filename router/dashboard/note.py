@@ -102,7 +102,7 @@ async def add_note(req: Request,
         "verify_bucket", {"user_id": str(user), "bucket_id": str(bucket_id)}).execute()
     if not verify_bucket_data[1]:
         raise_custom_error(401, 310)
-    user_data, count = supabase.table("user_setting").select("first_name", "last_name").eq(
+    user_data, count = supabase.table("user_setting").select("first_name", "last_name").eq("is_deleted", False).eq(
         "id", user).execute()
     first_name = user_data[1][0].get("first_name")
     last_name = user_data[1][0].get("last_name")
@@ -118,7 +118,7 @@ async def add_note(req: Request,
         print(e)
         raise_custom_error(500, 120)
     user_signature_data, count = supabase.table("user_setting").select(
-        "has_signature").eq("id", user).execute()
+        "has_signature").eq("is_deleted", False).eq("id", user).execute()
     has_signature = user_signature_data[1][0].get("has_signature")
     if has_signature:
         url = generate_presigned_url(str(user) + ".png")
@@ -337,7 +337,7 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
             # break
             raise_custom_error(401, 820)
         user_data, count = supabase.table("user_setting").select(
-            "*").eq("id", user_id).execute()
+            "*").eq("is_deleted", False).eq("id", user_id).execute()
         has_signature = user_data[1][0].get("has_signature")
         if has_signature:
             url = generate_presigned_url(
