@@ -35,7 +35,7 @@ def read_bucket(bucket_id: UUID4):
 def read_bucket_list(project_id: UUID4):
     try:
         data, count = supabase.rpc("get_bucket_info_list", {
-            "b_project_id": str(project_id)}).execute()
+            "b_project_id": str(project_id)}).order("created_at", desc=True).execute()
         return data[1]
     except Exception as e:
         print(e)
