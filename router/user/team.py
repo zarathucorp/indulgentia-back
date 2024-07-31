@@ -17,6 +17,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
 @router.get("/number", tags=["team"])
 def get_team_user_number_including_pending(req: Request):
     user: UUID4 = verify_user(req)
@@ -29,10 +30,11 @@ def get_team_user_number_including_pending(req: Request):
         user_team_id_uuid = UUID(user_team_id)
     except ValueError:
         raise_custom_error(422, 210)
-    data, count = supabase.rpc("get_team_user_count", {"u_team_id": str(user_team_id)}).execute()
+    data, count = supabase.rpc("get_team_user_count", {
+                               "u_team_id": str(user_team_id)}).execute()
     if not data[1]:
         raise_custom_error(500, 250)
-    
+
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1]
@@ -147,7 +149,7 @@ def change_team_leader(req: Request, team_id: str, team: ChangeTeamLeaderRequest
     if not validate_user_is_leader(user, UUID(team_id)):
         raise_custom_error(401, 520)
     data, count = supabase.table("team").update(
-        {"team_leader_id": team.next_leader_id}).eq("is_deleted", False).eq("is_deleted", False).eq("id", team_id).execute()
+        {"team_leader_id": team.next_leader_id}).eq("is_deleted", False).eq("id", team_id).execute()
     if not data[1]:
         raise_custom_error(500, 220)
     res = data[1][0]
@@ -190,8 +192,8 @@ def accept_team_invite(req: Request, team_id: str, invite: TeamInviteRequest):
         if not team_invite_data[1]:
             raise_custom_error(500, 220)
         # change to trigger in supabase
-        user_data, count = supabase.table("user_setting").eq("is_deleted", False).update(
-            {"team_id": team_id}).eq("id", user).execute()
+        user_data, count = supabase.table("user_setting").update(
+            {"team_id": team_id}).eq("is_deleted", False).eq("id", user).execute()
         if not user_data[1]:
             raise_custom_error(500, 220)
         return JSONResponse(content={
