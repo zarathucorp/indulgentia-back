@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends, HTTPException, status, Security, APIRouter, Request, Cookie
 from fastapi.responses import JSONResponse
@@ -11,6 +12,9 @@ from database.supabase import supabase
 from func.auth.auth import verify_user
 from func.error.error import raise_custom_error
 
+load_dotenv(verbose=True)
+
+FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 router = APIRouter(
     prefix="/admin",
@@ -189,4 +193,29 @@ def set_admin(req: Request, user: AdminSetAdmin):
     return JSONResponse(content={
         "status": "succeed",
         "data": user_data[1][0],
+    })
+
+
+@router.post("/user/send-reset-password-email", tags=["admin"])
+def send_reset_password(req: Request, user: AdminBase):
+
+    admin_user: UUID4 = verify_user(req)
+    if not admin_user:
+        raise_custom_error(403, 213)
+    admin_user_data, count = supabase.table("user_setting").select(
+        "*").eq("is_deleted", False).eq("id", admin_user).execute()
+    if admin_user_data[1][0]["is_admin"] == False:
+        raise_custom_error(403, 200)
+    user_data, count = supabase.table("user_setting").select(
+        "*").eq("is_deleted", False).eq("email", user.email).execute()
+    if not user_data:
+        raise_custom_error(401, 110)
+
+    supabase.auth.reset_password_email(user.email, {
+        "redirect_to": FRONTEND_URL + "/auth/resetpassword",
+    })
+
+    return JSONResponse(content={
+        "status": "succeed",
+        "email": user.email,
     })
