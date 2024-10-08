@@ -49,3 +49,9 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/indulgentia-back:latest
             ghcr.io/${{ github.repository_owner }}/indulgentia-back:${{ env.RELEASE_VERSION }}
+
+      - name: Trigger rndsillog-network repo action
+        run: |
+          curl -X POST -H "Authorization: token ${{ secrets.GHCR_TOKEN }}" \
+          -d '{"event_type": "trigger"}' \
+          https://api.github.com/repos/zarathucorp/rndsillog-network/dispatches
