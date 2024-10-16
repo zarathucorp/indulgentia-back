@@ -146,8 +146,8 @@ async def drop_project(req: Request, project_id: str):
         "verify_project", {"user_id": str(user), "project_id": project_id}).execute()
     if not data[1]:
         raise_custom_error(401, 210)
-
-    if not validate_user_is_leader(user, project_id):
+    team_id = uuid.UUID(get_user_team(user))
+    if not validate_user_is_leader(user, team_id):
         raise_custom_error(401, 520)
 
     res = flag_is_deleted_project(project_id)

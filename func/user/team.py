@@ -114,6 +114,7 @@ def validate_exceed_max_members(team_id: UUID4):
         print(e)
         raise_custom_error(500, 230)
 
+
 def validate_user_in_premium_team(user_id: UUID4):
     team_id = get_user_team(user_id)
     if not team_id:
