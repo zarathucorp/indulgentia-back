@@ -1,7 +1,10 @@
 import os
+import time
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+import logging
+from typing import Awaitable, Callable
 
 import uvicorn
 
@@ -32,6 +35,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# log 설정
+logger = logging.getLogger(__name__)
+MWCNFunc = Callable[[Request], Awaitable[Response]]
+
+
+@app.middleware("http")
+async def logging_middleware(request: Request, call_next: MWCNFunc) -> Response:
+    start = time.time()
+    response = await call_next(request)
+    duration = (time.time() - start) / 1000
+    source = f"{request.client.host}:{request.client.port}"
+    resource = f"{request.method} {request.url.path}"
+    result = f"{response.status_code} [{duration:.1f}ms]"
+    message = f"{source} => {resource} => {result}"
+    logger.info(message)
+    return response
+
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(dashboard.router)
@@ -41,4 +62,5 @@ app.include_router(validate.router)
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000,
+                reload=True, log_config='logging.yaml')

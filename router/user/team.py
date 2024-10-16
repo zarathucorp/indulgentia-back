@@ -238,6 +238,7 @@ def reject_team_invite(req: Request, team_id: str, invite: TeamInviteRequest):
 
 @router.delete("/{team_id}/exit", tags=["team"])
 def exit_team(req: Request, team_id: str):
+    raise Exception('Test용 에러')
     try:
         UUID(team_id)
     except ValueError:
