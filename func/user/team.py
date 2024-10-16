@@ -119,7 +119,6 @@ def validate_user_in_premium_team(user_id: UUID4):
     team_id = get_user_team(user_id)
     if not team_id:
         raise_custom_error(401, 540)
-    print(team_id)
     try:
         datetime_now = datetime.now()
         data, count = supabase.table(
