@@ -18,11 +18,21 @@ handlers:
         backupCount: 7
         encoding: utf-8
 
+    custom_file:
+        class: custom_handlers.CustomTimedRotatingFileHandler
+        level: INFO
+        formatter: standard
+        filename: logs/app.log
+        when: midnight
+        backupCount: 7
+        encoding: utf-8
+        maxDays: 7
+
 loggers:
     # root logger
     "":
         level: INFO
-        handlers: [console, file]
+        handlers: [console, custom_file]
     
     # handlers=[] and propagate=false turns this logger off
     "uvicorn.access":
@@ -31,5 +41,5 @@ loggers:
     
     # having this logger just propagate to root doesn't seem to work
     "uvicorn.error":
-        handlers: [console, file]
+        handlers: [console, custom_file]
         propagate: false
