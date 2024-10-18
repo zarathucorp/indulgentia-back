@@ -417,7 +417,7 @@ def verify_note_pdf(req: Request, file: UploadFile = File()):
     file_contents = file.file.read()
     try:
         pyhanko_verify_res = verify_pdf(file_contents)
-    except IndexError:        
+    except IndexError:
         return JSONResponse(content={
             "status": "succeed",
             "data": {"is_verified": False, "message": "PDF is not signed by Rndsillog", "entry": None, "receipt": None}
@@ -492,9 +492,8 @@ def verify_note_pdf_with_note_id(req: Request, note_id: str, file: UploadFile = 
 
     return JSONResponse(content={
         "status": "succeed",
-        "data": { "is_verified": veify_res, "message": message, "entry": entry, "receipt": receipt}
+        "data": {"is_verified": veify_res, "message": message, "entry": entry, "receipt": receipt}
     })
-
 
 
 @ router.post("/github/{bucket_id}", tags=["note"])
@@ -515,9 +514,12 @@ async def add_github_note_all_in_bucket(req: Request, repository_info: Repositor
     if not user_data[1]:
         raise_custom_error(500, 231)
 
-    commit_responses = fetch_github_data(user_data[1][0].get("github_token"), repository_info.owner, repository_info.name, "commits")
-    issue_responses = fetch_github_data(user_data[1][0].get("github_token"), repository_info.owner, repository_info.name, "issues")
-    pr_responses = fetch_github_data(user_data[1][0].get("github_token"), repository_info.owner, repository_info.name, "pulls")
+    commit_responses = fetch_github_data(user_data[1][0].get(
+        "github_token"), repository_info.owner, repository_info.name, "commits")
+    issue_responses = fetch_github_data(user_data[1][0].get(
+        "github_token"), repository_info.owner, repository_info.name, "issues")
+    pr_responses = fetch_github_data(user_data[1][0].get(
+        "github_token"), repository_info.owner, repository_info.name, "pulls")
     commit_markdown = "# Commit Details\n\n"
     issue_markdown = ""
     issue_action = {
@@ -539,7 +541,7 @@ async def add_github_note_all_in_bucket(req: Request, repository_info: Repositor
     for res in issue_responses:
         issue_markdown += f"## {issue_action.get(res.get('state'))}\n"
         issue_markdown += f"- Title: {res.get('title')}\n"
-        issue_markdown += f"- Description: {res.get('body', 'No description')}\n"
+        issue_markdown += f"- Description: \n```markdown\n{res.get('body', 'No description')}\n```\n"
         issue_markdown += f"- Author: {res.get('user').get('login')}\n"
         issue_markdown += f"- URL: [Link]({res.get('html_url')})\n\n"
     for res in pr_responses:
