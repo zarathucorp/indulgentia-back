@@ -25,4 +25,4 @@ COPY . .
 
 EXPOSE 8000
 
-ENTRYPOINT ["uvicorn", "main:app", "--host=0.0.0.0", "--reload", "--log_config=logging.yaml"]
+ENTRYPOINT ["uvicorn", "main:app", "--host=0.0.0.0", "--reload", "--log-config=logging.yaml"]

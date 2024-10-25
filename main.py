@@ -62,5 +62,9 @@ app.include_router(validate.router)
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000,
-                reload=True, log_config='logging.yaml')
+    if (os.getenv("RUNNING_MODE") == "dev"):
+        uvicorn.run("main:app", host="0.0.0.0", port=8000,
+                    reload=True)
+    elif (os.getenv("RUNNING_MODE") == "prod"):
+        uvicorn.run("main:app", host="0.0.0.0", port=8000,
+                    reload=True, log_config='logging.yaml')
