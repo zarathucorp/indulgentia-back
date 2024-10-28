@@ -63,6 +63,7 @@ def verify_user(req: Request) -> UUID4:
 
     # 쿠키 없는경우 Exception
     if (SUPABASE_COOKIE is None) | (SUPABASE_COOKIE == ""):
+        print(req.__dict__)
         raise_custom_error(403, 211)
         # raise HTTPException(status_code=401, detail="Unauthorized")
     SUPABASE_COOKIE_DICT = json.loads(urllib.parse.unquote(
