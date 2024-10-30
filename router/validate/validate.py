@@ -8,7 +8,7 @@ router = APIRouter(
 )
 
 
-@router.post("/pdf")
+@router.post("/pdf", tags=["features"])
 async def validate_pdf(file: UploadFile = File(...)):
     contents = await file.read()
     hash_object = hashlib.sha256(contents)

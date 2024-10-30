@@ -17,7 +17,8 @@ from router.validate import validate
 
 load_dotenv(verbose=True)
 
-app = FastAPI()
+app = FastAPI(openapi_url='/api/openapi.json')
+
 
 origins = [
     "http://localhost",
