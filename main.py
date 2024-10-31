@@ -17,7 +17,9 @@ from router.validate import validate
 
 load_dotenv(verbose=True)
 
-app = FastAPI(openapi_url='/api/openapi.json')
+ROOT_PATH = str(os.getenv("ROOT_PATH"))
+
+app = FastAPI(root_path=ROOT_PATH)
 
 
 origins = [
