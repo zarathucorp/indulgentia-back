@@ -49,7 +49,7 @@ def read_note_list(bucket_id: UUID4):
         #     "bucket_id", bucket_id).order("created_at", desc=True).execute()
         data, count = supabase.rpc(
             "read_note_list_with_user_setting", {"b_id": str(bucket_id)}).execute()
-        if not data[1]:
+        if not data:
             raise_custom_error(500, 231)
         return data[1]
     except Exception as e:

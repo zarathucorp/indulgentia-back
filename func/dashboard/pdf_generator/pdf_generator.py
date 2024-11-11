@@ -133,21 +133,23 @@ def delete_old_files(directory_path):
         print(e)
         raise_custom_error(500, 130)
 
+
 def count_sections_and_split(markdown_content):
-    # "\n\n"의 위치를 찾아 리스트에 저장
-    splits = [pos for pos in range(len(markdown_content)) if markdown_content.startswith("\n\n", pos)]
-    
-    # 각 섹션이 6개의 "\n\n"을 포함하도록 인덱스 계산
-    split_indices = splits[6::6]  # 6개의 "\n\n"마다 인덱스를 추출하여 섹션을 나눔
-    
+    # "##"의 위치를 찾아 리스트에 저장
+    splits = [pos for pos in range(
+        len(markdown_content)) if markdown_content.startswith("##", pos)]
+
+    # 각 섹션이 4개의 "##"을 포함하도록 인덱스 계산
+    split_indices = splits[4::4]  # 6개의 "##"마다 인덱스를 추출하여 섹션을 나눔
+
     # markdown_content를 섹션으로 나누기
     sections = []
     start = 0
     for index in split_indices:
         sections.append(markdown_content[start:index])
-        start = index + 2  # "\n\n" 다음 위치부터 시작
+        start = index  # "##" 위치부터 시작
     sections.append(markdown_content[start:])  # 마지막 섹션 추가
-    
+
     return sections
 
 
@@ -416,7 +418,8 @@ async def generate_pdf_using_markdown(note_id: str, markdown_content: str, proje
                      fname=f"{SOURCE_PATH}/Pretendard-Bold.ttf")
         pdf.set_font("Pretendard", size=16)
 
-        html_intro = markdown(markdown_content_sections[0])
+        html_intro = markdown(
+            markdown_content_sections[0], extensions=['fenced_code'])
         # pdf.multi_cell(w=200, text=markdown_content, markdown=True)
         pdf.write_html(html_intro, tag_styles={
             "h1": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=24),
@@ -496,13 +499,13 @@ async def generate_pdf_using_markdown(note_id: str, markdown_content: str, proje
 
             pdf.image(signature_url, x=img_x, y=img_y,
                       w=img_width, h=img_height)
-        
+
         if section_count > 1:
             for section in markdown_content_sections[1:]:
                 pdf.add_page()
                 pdf.set_text_color(0, 0, 0)
                 pdf.set_font_size(16)
-                html_section = markdown(section)
+                html_section = markdown(section, extensions=['fenced_code'])
                 pdf.write_html(html_section, tag_styles={
                     "h1": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=24),
                     "h2": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=20),
