@@ -539,9 +539,12 @@ async def add_github_note_all_in_bucket(req: Request, repository_info: Repositor
         commit_markdown += f"- **Message: **{res.get('commit').get('message')}\n"
         commit_markdown += f"- **URL: **[Commit Link]({res.get('html_url')})\n\n"
     for res in issue_responses:
+        body = res.get('body', 'No description')
+        description = body.split(
+            '\n')[0] + ('\n(...)' if len(body.split('\n')) > 1 else '')
         issue_markdown += f"## {issue_action.get(res.get('state'))}\n"
         issue_markdown += f"- Title: {res.get('title')}\n"
-        issue_markdown += f"- Description: \n```markdown\n{res.get('body', 'No description')}\n```\n"
+        issue_markdown += f"- Description: \n```markdown\n{description}\n```\n"
         issue_markdown += f"- Author: {res.get('user').get('login')}\n"
         issue_markdown += f"- URL: [Link]({res.get('html_url')})\n\n"
     for res in pr_responses:
