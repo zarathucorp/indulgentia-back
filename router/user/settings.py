@@ -21,6 +21,8 @@ SIGNATURE_AZURE_CONTAINER_NAME = DEFAULT_AZURE_CONTAINER_NAME
 ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif',
                       'svg', 'bmp', 'webp', 'tiff', 'jfif', 'pjpeg', 'pjp']
 
+MAX_FILE_SIZE = 1024 * 1024  # 1MB
+
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -56,6 +58,13 @@ async def add_signature_file(req: Request, file: UploadFile = File(...)):
 
     if not allowed_file(file.filename):
         raise_custom_error(422, 240)
+
+    # 파일 용량 체크
+    print("파일 사이즈 체크")
+    print(file.size)
+    if file.size and file.size > MAX_FILE_SIZE:
+        raise_custom_error(422, 251)
+
     data = await file.read()
     blob_extention = file.filename.split(".")[-1]
     blob_name = str(user) + "." + blob_extention

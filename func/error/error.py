@@ -112,6 +112,8 @@ def raise_custom_error(status_code: int, additional_code: int):
             "230": "Invalid date format",
             "231": "Start date is later than end date",
             "240": "Invalid file extension",
+            "250": "Invalid file size",
+            "251": "Invalid file size (1024kb)",
         },
 
         # 500 Internal Server Error
