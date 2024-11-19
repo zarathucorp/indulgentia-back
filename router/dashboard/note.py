@@ -328,17 +328,20 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
         "git_repository", GithubMarkdownRequest.repositoryInfo.name).eq("is_deleted", False).execute()
     if not data[1]:
         raise_custom_error(500, 232)
-
+    # # 테스트 data
+    # data = None, [{"bucket_id": "b1", "user_id": "u1"}]
     res_list = []
     for idx, row in enumerate(data[1]):
         note_id = uuid.uuid4()
         note_id_string = str(note_id)
         user_id = row.get("user_id")
         if not validate_user_in_premium_team(user_id):
-            # break
             raise_custom_error(401, 820)
         user_data, count = supabase.table("user_setting").select(
             "*").eq("is_deleted", False).eq("id", user_id).execute()
+        # # 테스트 user_data
+        # user_data = None, [{"id": "u1", "has_signature": False,
+        #                     "first_name": "first", "last_name": "last"}]
         has_signature = user_data[1][0].get("has_signature")
         if has_signature:
             url = generate_presigned_url(
@@ -349,7 +352,6 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
         last_name = user_data[1][0].get("last_name")
         if not first_name and not last_name:
             raise_custom_error(401, 121)
-            # username = "No Name"
         else:
             username = last_name + " " + first_name
 
@@ -357,11 +359,19 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
             "bucket_breadcrumb_data", {"bucket_id": row.get("bucket_id")}).execute()
         if not breadcrumb_data[1]:
             raise_custom_error(500, 250)
+        # # 테스트 breadcrumb_data
+        # breadcrumb_data = None, [
+        #     {"project_title": "project", "bucket_title": "bucket"}]
 
         pdf_res = await generate_pdf_using_markdown(note_id=note_id_string, markdown_content=GithubMarkdownRequest.markdownContent, project_title=breadcrumb_data[1][0].get("project_title"), bucket_title=breadcrumb_data[1][0].get("bucket_title"), author=username, signature_url=url)
         await sign_pdf(pdf_res)
         signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id_string}_signed.pdf"
         SOURCE_PATH = "func/dashboard/pdf_generator"
+        # # 테스트 Response
+        # return JSONResponse(content={
+        #     "status": "succeed",
+        #     "data": res_list
+        # })
         try:
             # upload pdf
             with open(signed_pdf_res, "rb") as f:
@@ -555,9 +565,9 @@ async def add_github_note_all_in_bucket(req: Request, repository_info: Repositor
         pr_markdown += f"- State: {res.get('state')}\n"
         pr_markdown += f"- Created At: {res.get('created_at')}\n"
         if res.get('state') == "closed" and res.get('merged'):
-            pr_markdown += f"- Merged: Yes\n"
+            pr_markdown += f"- Merged: Yes\n\n"
         elif res.get('state') == "closed":
-            pr_markdown += f"- Merged: No\n"
+            pr_markdown += f"- Merged: No\n\n"
     markdown_content = commit_markdown + issue_markdown + pr_markdown
 
     # res_list = []
