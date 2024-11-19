@@ -140,7 +140,7 @@ def count_sections_and_split(markdown_content):
         len(markdown_content)) if markdown_content.startswith("##", pos)]
 
     # 각 섹션이 4개의 "##"을 포함하도록 인덱스 계산
-    split_indices = splits[4::4]  # 6개의 "##"마다 인덱스를 추출하여 섹션을 나눔
+    split_indices = splits[4::4]  # 4개의 "##"마다 인덱스를 추출하여 섹션을 나눔
 
     # markdown_content를 섹션으로 나누기
     sections = []
@@ -425,6 +425,7 @@ async def generate_pdf_using_markdown(note_id: str, markdown_content: str, proje
             "h1": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=24),
             "h2": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=20),
             "a": FontFace(family="Pretendard", color=(0, 0, 255), emphasis=None),
+            "code": FontFace(family="Pretendard", color=(120, 120, 120), size_pt=12),
         }, li_prefix_color=(0, 0, 0), ul_bullet_char=u"\u2022")
 
         pdf.set_font_size(10)
@@ -510,6 +511,7 @@ async def generate_pdf_using_markdown(note_id: str, markdown_content: str, proje
                     "h1": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=24),
                     "h2": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=20),
                     "a": FontFace(family="Pretendard", color=(0, 0, 255), emphasis=None),
+                    "code": FontFace(family="Pretendard", color=(120, 120, 120), size_pt=12),
                 }, li_prefix_color=(0, 0, 0), ul_bullet_char=u"\u2022")
 
         res = pdf.output()
