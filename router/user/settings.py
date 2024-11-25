@@ -149,7 +149,7 @@ def get_user_info(req: Request):
     if not user:
         raise_custom_error(403, 213)
     data, count = supabase.table("user_setting").select(
-        "id", "first_name", "last_name", "email").eq("is_deleted", False).eq("id", user).execute()
+        "id", "first_name", "last_name", "email", "is_admin").eq("is_deleted", False).eq("id", user).execute()
     if not data[1]:
         raise_custom_error(500, 231)
     return JSONResponse(content={

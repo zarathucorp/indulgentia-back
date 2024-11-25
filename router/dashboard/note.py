@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Form
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Form, BackgroundTasks
+from fastapi.responses import JSONResponse, FileResponse
 from pydantic import UUID4
 from typing import Optional, List, Union, Annotated, Literal
 import os
 import uuid
 import hashlib
 import asyncio
+import zipfile
+from pdfmerge import pdfmerge
 from datetime import datetime
 from pytz import timezone
 
@@ -26,6 +28,17 @@ router = APIRouter(
     prefix="/note",
     responses={404: {"description": "Not found"}},
 )
+
+# 파일 삭제 함수
+
+
+def delete_files(file_paths):
+    for file_path in file_paths:
+        try:
+            os.remove(file_path)
+            print(f"{file_path} deleted")
+        except Exception as e:
+            print(f"Error deleting {file_path}: {e}")
 
 
 # read list
@@ -260,6 +273,87 @@ async def get_note_file(req: Request, note_id: str):
         print(e)
         raise_custom_error(500, 312)
         # return JSONResponse(status_code=400, content={"status": "failed", "message": str(e)})
+
+
+class DonwloadNoteInfo(BaseModel):
+    note_ids: List[str]
+    is_merged_required: Optional[bool] = False
+    is_filename_id: Optional[bool] = False
+
+
+# pdf multiple download
+@router.post("/file", tags=["note"])
+async def get_note_files(req: Request, download_note_info: DonwloadNoteInfo, background_tasks: BackgroundTasks):
+    user: UUID4 = verify_user(req)
+    note_ids = download_note_info.note_ids
+    is_merged_required = download_note_info.is_merged_required
+    is_filename_id = download_note_info.is_filename_id
+    if not user:
+        raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
+    for note_id in note_ids:
+        try:
+            uuid.UUID(note_id)
+        except ValueError:
+            raise_custom_error(422, 210)
+
+    download_note_infos = []
+    title_list = []
+    for note_id in note_ids:
+        try:
+            note_info = {}
+            pdf = download_blob(note_id + ".pdf")
+            # pdf output 저장
+            with open(f"func/dashboard/pdf_generator/input/{note_id}.pdf", "wb") as f:
+                f.write(pdf)
+            note_info["index"] = note_ids.index(note_id)
+            note_info["id"] = note_id
+            note_detail = read_note_detail(note_id)
+            temp_title = note_detail.get("note_title")
+            if temp_title in title_list:
+                num = title_list.count(temp_title)
+                note_info["title"] = f"{temp_title}({num+1})"
+            else:
+                note_info["title"] = temp_title
+            title_list.append(temp_title)
+            download_note_infos.append(note_info)
+        except Exception as e:
+            print(e)
+            raise_custom_error(500, 312)
+
+    # 파일명이 title로 저장되는 경우
+    if not is_merged_required and not is_filename_id:
+        for note_info in download_note_infos:
+            os.rename(f"func/dashboard/pdf_generator/input/{note_info['id']}.pdf",
+                      f"func/dashboard/pdf_generator/input/{note_info['title']}.pdf")
+
+    current_time = datetime.now(
+        timezone('Asia/Seoul')).strftime("%Y%m%d_%H%M%S GMT+0900")
+    if is_merged_required:
+        pdfs = [
+            f"func/dashboard/pdf_generator/input/{note_info['id']}.pdf" for note_info in download_note_infos]
+        # pdf merge
+        output_file = f"func/dashboard/pdf_generator/output/Report_{current_time}.pdf"
+        pdfmerge(pdfs, output_file)
+        background_tasks.add_task(delete_files, pdfs + [output_file])
+        return FileResponse(output_file, media_type='application/pdf', filename=f"Report_{current_time}.pdf")
+    else:
+        if is_filename_id:
+            output_file = f"func/dashboard/pdf_generator/output/Report_{current_time}.zip"
+            with zipfile.ZipFile(output_file, "w") as zipf:
+                for note_info in download_note_infos:
+                    zipf.write(
+                        f"func/dashboard/pdf_generator/input/{note_info['id']}.pdf", f"{note_info['id']}.pdf")
+        else:
+            output_file = f"func/dashboard/pdf_generator/output/Report_{current_time}.zip"
+            with zipfile.ZipFile(output_file, "w") as zipf:
+                for note_info in download_note_infos:
+                    zipf.write(
+                        f"func/dashboard/pdf_generator/input/{note_info['title']}.pdf", f"{note_info['title']}.pdf")
+        background_tasks.add_task(delete_files, [
+                                  f"func/dashboard/pdf_generator/input/{note_info['title']}.pdf" for note_info in download_note_infos] + [output_file])
+        return FileResponse(output_file, media_type='application/zip', filename=f"Report_{current_time}.zip")
 
 
 @ router.get("/{note_id}/breadcrumb", tags=["note"])
