@@ -42,6 +42,17 @@ def generate_presigned_url(blob_name, container_name=DEFAULT_AZURE_CONTAINER_NAM
     return blob_url
 
 
+def download_blob(blob_name: str):
+    try:
+        blob_client = azure_blob_client.get_blob_client(
+            container=DEFAULT_AZURE_CONTAINER_NAME, blob=blob_name)
+        blob_data = blob_client.download_blob()
+        return blob_data.readall()
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 312)
+
+
 def upload_blob(data: bytes, blob_name: str):
     try:
         blob_client = azure_blob_client.get_blob_client(

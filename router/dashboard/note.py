@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Form
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Form, BackgroundTasks
+from fastapi.responses import JSONResponse, FileResponse
 from pydantic import UUID4
 from typing import Optional, List, Union, Annotated, Literal
 import os
 import uuid
 import hashlib
-import asyncio
+from pdfmerge import pdfmerge
 from datetime import datetime
 from pytz import timezone
 
@@ -20,6 +20,7 @@ from cloud.azure.confidential_lendger import write_ledger, read_ledger, get_ledg
 from func.error.error import raise_custom_error
 from func.user.team import validate_user_in_premium_team
 from func.github.fetch import fetch_github_data
+from func.note_handling.note_export import process_note_ids, delete_files
 
 
 router = APIRouter(
@@ -260,6 +261,39 @@ async def get_note_file(req: Request, note_id: str):
         print(e)
         raise_custom_error(500, 312)
         # return JSONResponse(status_code=400, content={"status": "failed", "message": str(e)})
+
+
+class DonwloadNoteInfo(BaseModel):
+    note_ids: List[str]
+    is_merged_required: Optional[bool] = False
+    is_filename_id: Optional[bool] = False
+
+
+# pdf multiple download
+@router.post("/file", tags=["note"])
+async def get_note_files(req: Request, download_note_info: DonwloadNoteInfo, background_tasks: BackgroundTasks):
+    user: UUID4 = verify_user(req)
+    note_ids = download_note_info.note_ids
+    is_merged_required = download_note_info.is_merged_required
+    is_filename_id = download_note_info.is_filename_id
+    if not user:
+        raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
+    for note_id in note_ids:
+        try:
+            uuid.UUID(note_id)
+        except ValueError:
+            raise_custom_error(422, 210)
+
+    # 노트 작업
+    output_file, media_type, filename, files_to_delete = process_note_ids(
+        note_ids, is_merged_required, is_filename_id)
+
+    # 작업 후 파일 삭제
+    background_tasks.add_task(delete_files, files_to_delete)
+
+    return FileResponse(output_file, media_type=media_type, filename=filename)
 
 
 @ router.get("/{note_id}/breadcrumb", tags=["note"])

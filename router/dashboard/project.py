@@ -1,15 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
+from fastapi.responses import JSONResponse, FileResponse
 import uuid
 from pydantic import UUID4
-from typing import List
+from typing import Optional, List
 import uuid
+from datetime import datetime
+from pytz import timezone
+import zipfile
 
 from database import supabase, schemas
 from func.auth.auth import *
 from func.dashboard.crud.project import *
+from func.dashboard.crud.bucket import *
+from func.dashboard.crud.note import *
 from func.user.team import *
 from func.error.error import raise_custom_error
+from func.note_handling.note_export import process_bucket_ids, delete_files
 
 
 router = APIRouter(
@@ -17,6 +23,62 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
+class DownloadProjectInfo(BaseModel):
+    project_ids: List[str]
+
+
+@router.post("/file", tags=["project"])
+async def get_project_files(req: Request, download_project_info: DownloadProjectInfo, background_tasks: BackgroundTasks):
+    user: UUID4 = verify_user(req)
+    project_ids = download_project_info.project_ids
+    if not user:
+        raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
+    for project_id in project_ids:
+        try:
+            uuid.UUID(project_id)
+        except ValueError:
+            raise_custom_error(422, 210)
+
+    download_project_infos = []
+    for project_id in project_ids:
+        try:
+            project_info = {}
+            # 프로젝트 유효성 검사
+            data, count = supabase.rpc(
+                "verify_project", {"user_id": str(user), "project_id": project_id}).execute()
+            if not data[1]:
+                raise_custom_error(401, 210)
+            # 프로젝트의 버킷 목록 읽기
+            bucket_list = read_bucket_list(uuid.UUID(project_id))
+            bucket_ids = [bucket.get("id") for bucket in bucket_list]
+
+            # 버킷의 노트 작업
+            download_project_infos.extend(
+                process_bucket_ids(user, bucket_ids, True, False)
+            )
+        except Exception as e:
+            print(e)
+            raise_custom_error(500, 312)
+
+    current_time = datetime.now(
+        timezone('Asia/Seoul')).strftime("%Y%m%d_%H%M%S GMT+0900")
+    with zipfile.ZipFile(f"func/dashboard/pdf_generator/output/Report_{current_time}.zip", "w") as zipf:
+        for project_info in download_project_infos:
+            zipf.write(project_info["output_file"], project_info["filename"])
+
+    # 작업 후 파일 삭제
+    final_files_to_delete = []
+    for project_info in download_project_infos:
+        final_files_to_delete += project_info["files_to_delete"]
+    final_files_to_delete.append(
+        f"func/dashboard/pdf_generator/output/Report_{current_time}.zip")
+
+    background_tasks.add_task(delete_files, final_files_to_delete)
+
+    return FileResponse(f"func/dashboard/pdf_generator/output/Report_{current_time}.zip", filename=f"Report_{current_time}.zip", media_type="application/zip")
 
 # read list
 
