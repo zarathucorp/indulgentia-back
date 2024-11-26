@@ -5,8 +5,6 @@ from typing import Optional, List, Union, Annotated, Literal
 import os
 import uuid
 import hashlib
-import asyncio
-import zipfile
 from pdfmerge import pdfmerge
 from datetime import datetime
 from pytz import timezone
@@ -22,23 +20,13 @@ from cloud.azure.confidential_lendger import write_ledger, read_ledger, get_ledg
 from func.error.error import raise_custom_error
 from func.user.team import validate_user_in_premium_team
 from func.github.fetch import fetch_github_data
+from func.note_handling.note_export import process_note_ids, delete_files
 
 
 router = APIRouter(
     prefix="/note",
     responses={404: {"description": "Not found"}},
 )
-
-# 파일 삭제 함수
-
-
-def delete_files(file_paths):
-    for file_path in file_paths:
-        try:
-            os.remove(file_path)
-            print(f"{file_path} deleted")
-        except Exception as e:
-            print(f"Error deleting {file_path}: {e}")
 
 
 # read list
@@ -298,62 +286,14 @@ async def get_note_files(req: Request, download_note_info: DonwloadNoteInfo, bac
         except ValueError:
             raise_custom_error(422, 210)
 
-    download_note_infos = []
-    title_list = []
-    for note_id in note_ids:
-        try:
-            note_info = {}
-            pdf = download_blob(note_id + ".pdf")
-            # pdf output 저장
-            with open(f"func/dashboard/pdf_generator/input/Report_{note_id}.pdf", "wb") as f:
-                f.write(pdf)
-            note_info["index"] = note_ids.index(note_id)
-            note_info["id"] = note_id
-            note_detail = read_note_detail(note_id)
-            temp_title = note_detail.get("note_title")
-            if temp_title in title_list:
-                num = title_list.count(temp_title)
-                note_info["title"] = f"{temp_title}({num+1})"
-            else:
-                note_info["title"] = temp_title
-            title_list.append(temp_title)
-            download_note_infos.append(note_info)
-        except Exception as e:
-            print(e)
-            raise_custom_error(500, 312)
+    # 노트 작업
+    output_file, media_type, filename, files_to_delete = process_note_ids(
+        note_ids, is_merged_required, is_filename_id)
 
-    # 파일명이 title로 저장되는 경우
-    if not is_merged_required and not is_filename_id:
-        for note_info in download_note_infos:
-            os.rename(f"func/dashboard/pdf_generator/input/Report_{note_info['id']}.pdf",
-                      f"func/dashboard/pdf_generator/input/Report_{note_info['title']}.pdf")
+    # 작업 후 파일 삭제
+    background_tasks.add_task(delete_files, files_to_delete)
 
-    current_time = datetime.now(
-        timezone('Asia/Seoul')).strftime("%Y%m%d_%H%M%S GMT+0900")
-    if is_merged_required:
-        pdfs = [
-            f"func/dashboard/pdf_generator/input/Report_{note_info['id']}.pdf" for note_info in download_note_infos]
-        # pdf merge
-        output_file = f"func/dashboard/pdf_generator/output/Report_{current_time}.pdf"
-        pdfmerge(pdfs, output_file)
-        background_tasks.add_task(delete_files, pdfs + [output_file])
-        return FileResponse(output_file, media_type='application/pdf', filename=f"Report_{current_time}.pdf")
-    else:
-        if is_filename_id:
-            output_file = f"func/dashboard/pdf_generator/output/Report_{current_time}.zip"
-            with zipfile.ZipFile(output_file, "w") as zipf:
-                for note_info in download_note_infos:
-                    zipf.write(
-                        f"func/dashboard/pdf_generator/input/Report_{note_info['id']}.pdf", f"Report_{note_info['id']}.pdf")
-        else:
-            output_file = f"func/dashboard/pdf_generator/output/Report_{current_time}.zip"
-            with zipfile.ZipFile(output_file, "w") as zipf:
-                for note_info in download_note_infos:
-                    zipf.write(
-                        f"func/dashboard/pdf_generator/input/Report_{note_info['title']}.pdf", f"Report_{note_info['title']}.pdf")
-        background_tasks.add_task(delete_files, [
-                                  f"func/dashboard/pdf_generator/input/Report_{note_info['title']}.pdf" for note_info in download_note_infos] + [output_file])
-        return FileResponse(output_file, media_type='application/zip', filename=f"Report_{current_time}.zip")
+    return FileResponse(output_file, media_type=media_type, filename=filename)
 
 
 @ router.get("/{note_id}/breadcrumb", tags=["note"])

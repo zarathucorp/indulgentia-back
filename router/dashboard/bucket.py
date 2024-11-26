@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
+from fastapi.responses import JSONResponse, FileResponse
 from pydantic import UUID4
+from typing import Optional, List, Union, Annotated, Literal
 import uuid
 import hashlib
 from datetime import datetime
 from pytz import timezone
+import zipfile
 
 from database import schemas
 from func.dashboard.crud.bucket import *
@@ -16,6 +18,7 @@ from func.user.team import validate_user_in_premium_team
 from func.github.fetch import fetch_github_data
 from func.dashboard.pdf_generator.pdf_generator import generate_pdf_using_markdown
 from func.note_handling.pdf_sign import sign_pdf
+from func.note_handling.note_export import process_note_ids, delete_files
 from func.dashboard.crud.note import *
 
 
@@ -23,6 +26,96 @@ router = APIRouter(
     prefix="/bucket",
     responses={404: {"description": "Not found"}},
 )
+
+
+class DonwloadBucketInfo(BaseModel):
+    bucket_ids: List[str]
+    is_merged_required: Optional[bool] = False
+    is_filename_id: Optional[bool] = False
+
+# pdf multiple download
+
+
+@router.post("/file", tags=["bucket"])
+async def get_bucket_files(req: Request, download_bucket_info: DonwloadBucketInfo, background_tasks: BackgroundTasks):
+    user: UUID4 = verify_user(req)
+    bucket_ids = download_bucket_info.bucket_ids
+    is_merged_required = download_bucket_info.is_merged_required
+    is_filename_id = download_bucket_info.is_filename_id
+    if not user:
+        raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
+    for bucket_id in bucket_ids:
+        try:
+            uuid.UUID(bucket_id)
+        except ValueError:
+            raise_custom_error(422, 210)
+
+    download_bucket_infos = []
+    for bucket_id in bucket_ids:
+        try:
+            bucket_info = {}
+            # 버킷 유효성 검사
+            data, count = supabase.rpc(
+                "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
+            if not data[1]:
+                raise_custom_error(401, 310)
+            # 버킷 내용 읽기
+            note_list = read_note_list(bucket_id)
+            note_ids = [note.get("id") for note in note_list]
+
+            # 노트 작업
+            output_file, media_type, filename, files_to_delete = process_note_ids(
+                note_ids, is_merged_required, is_filename_id)
+
+            # 파일명 변경
+            bucket_title = read_bucket(uuid.UUID(bucket_id)).get("title")
+            if media_type == "application/pdf":
+                new_filename = f"{bucket_title}.pdf"
+            else:
+                new_filename = f"{bucket_title}.zip"
+            new_output_file = f"func/dashboard/pdf_generator/output/{new_filename}"
+            new_files_to_delete = []
+            for file_to_delete in files_to_delete:
+                if file_to_delete.startswith("func/dashboard/pdf_generator/input/"):
+                    new_files_to_delete.append(file_to_delete)
+
+            new_files_to_delete.append(new_output_file)
+
+            os.rename(
+                output_file, new_output_file)
+
+            # 버킷 정보 저장
+            bucket_info["id"] = bucket_id
+            bucket_info["title"] = bucket_title
+            bucket_info["note_ids"] = note_ids
+            bucket_info["output_file"] = new_output_file
+            bucket_info["media_type"] = media_type
+            bucket_info["filename"] = new_filename
+            bucket_info["files_to_delete"] = new_files_to_delete
+
+            download_bucket_infos.append(bucket_info)
+        except Exception as e:
+            print(e)
+            raise_custom_error(500, 312)
+
+    current_time = datetime.now(
+        timezone('Asia/Seoul')).strftime("%Y%m%d_%H%M%S GMT+0900")
+    with zipfile.ZipFile(f"func/dashboard/pdf_generator/output/Report_{current_time}.zip", "w") as zipf:
+        for bucket_info in download_bucket_infos:
+            zipf.write(bucket_info["output_file"], bucket_info["filename"])
+
+    # 작업 후 파일 삭제
+    final_files_to_delete = []
+    for bucket_info in download_bucket_infos:
+        final_files_to_delete += bucket_info["files_to_delete"]
+    final_files_to_delete.append(
+        f"func/dashboard/pdf_generator/output/Report_{current_time}.zip")
+
+    background_tasks.add_task(delete_files, final_files_to_delete)
+
+    return FileResponse(f"func/dashboard/pdf_generator/output/Report_{current_time}.zip", filename=f"Report_{current_time}.zip", media_type="application/zip")
 
 
 # read list
@@ -219,7 +312,8 @@ async def connect_github_repository(req: Request, bucket_id: str, newRepo: schem
         "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     if not verify_data[1]:
         raise_custom_error(401, 310)
-    check_gitrepo_exists_result = supabase.rpc("check_gitrepo_exists", {"g_bucket_id": bucket_id, "g_repo_url": newRepo.repo_url}).execute().data
+    check_gitrepo_exists_result = supabase.rpc("check_gitrepo_exists", {
+                                               "g_bucket_id": bucket_id, "g_repo_url": newRepo.repo_url}).execute().data
     if check_gitrepo_exists_result:
         print(check_gitrepo_exists_result)
         print("here")
@@ -232,9 +326,12 @@ async def connect_github_repository(req: Request, bucket_id: str, newRepo: schem
     if not user_data[1]:
         raise_custom_error(500, 231)
 
-    commit_responses = fetch_github_data(user_data[1][0].get("github_token"), newRepo.git_username, newRepo.git_repository, "commits")
-    issue_responses = fetch_github_data(user_data[1][0].get("github_token"), newRepo.git_username, newRepo.git_repository, "issues")
-    pr_responses = fetch_github_data(user_data[1][0].get("github_token"), newRepo.git_username, newRepo.git_repository, "pulls")
+    commit_responses = fetch_github_data(user_data[1][0].get(
+        "github_token"), newRepo.git_username, newRepo.git_repository, "commits")
+    issue_responses = fetch_github_data(user_data[1][0].get(
+        "github_token"), newRepo.git_username, newRepo.git_repository, "issues")
+    pr_responses = fetch_github_data(user_data[1][0].get(
+        "github_token"), newRepo.git_username, newRepo.git_repository, "pulls")
     commit_markdown = "# Commit Details\n\n"
     issue_markdown = ""
     issue_action = {
