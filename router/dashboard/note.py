@@ -305,7 +305,7 @@ async def get_note_files(req: Request, download_note_info: DonwloadNoteInfo, bac
             note_info = {}
             pdf = download_blob(note_id + ".pdf")
             # pdf output 저장
-            with open(f"func/dashboard/pdf_generator/input/{note_id}.pdf", "wb") as f:
+            with open(f"func/dashboard/pdf_generator/input/Report_{note_id}.pdf", "wb") as f:
                 f.write(pdf)
             note_info["index"] = note_ids.index(note_id)
             note_info["id"] = note_id
@@ -325,14 +325,14 @@ async def get_note_files(req: Request, download_note_info: DonwloadNoteInfo, bac
     # 파일명이 title로 저장되는 경우
     if not is_merged_required and not is_filename_id:
         for note_info in download_note_infos:
-            os.rename(f"func/dashboard/pdf_generator/input/{note_info['id']}.pdf",
-                      f"func/dashboard/pdf_generator/input/{note_info['title']}.pdf")
+            os.rename(f"func/dashboard/pdf_generator/input/Report_{note_info['id']}.pdf",
+                      f"func/dashboard/pdf_generator/input/Report_{note_info['title']}.pdf")
 
     current_time = datetime.now(
         timezone('Asia/Seoul')).strftime("%Y%m%d_%H%M%S GMT+0900")
     if is_merged_required:
         pdfs = [
-            f"func/dashboard/pdf_generator/input/{note_info['id']}.pdf" for note_info in download_note_infos]
+            f"func/dashboard/pdf_generator/input/Report_{note_info['id']}.pdf" for note_info in download_note_infos]
         # pdf merge
         output_file = f"func/dashboard/pdf_generator/output/Report_{current_time}.pdf"
         pdfmerge(pdfs, output_file)
@@ -344,15 +344,15 @@ async def get_note_files(req: Request, download_note_info: DonwloadNoteInfo, bac
             with zipfile.ZipFile(output_file, "w") as zipf:
                 for note_info in download_note_infos:
                     zipf.write(
-                        f"func/dashboard/pdf_generator/input/{note_info['id']}.pdf", f"{note_info['id']}.pdf")
+                        f"func/dashboard/pdf_generator/input/Report_{note_info['id']}.pdf", f"Report_{note_info['id']}.pdf")
         else:
             output_file = f"func/dashboard/pdf_generator/output/Report_{current_time}.zip"
             with zipfile.ZipFile(output_file, "w") as zipf:
                 for note_info in download_note_infos:
                     zipf.write(
-                        f"func/dashboard/pdf_generator/input/{note_info['title']}.pdf", f"{note_info['title']}.pdf")
+                        f"func/dashboard/pdf_generator/input/Report_{note_info['title']}.pdf", f"Report_{note_info['title']}.pdf")
         background_tasks.add_task(delete_files, [
-                                  f"func/dashboard/pdf_generator/input/{note_info['title']}.pdf" for note_info in download_note_infos] + [output_file])
+                                  f"func/dashboard/pdf_generator/input/Report_{note_info['title']}.pdf" for note_info in download_note_infos] + [output_file])
         return FileResponse(output_file, media_type='application/zip', filename=f"Report_{current_time}.zip")
 
 
