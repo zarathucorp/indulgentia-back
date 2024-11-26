@@ -18,7 +18,7 @@ from func.user.team import validate_user_in_premium_team
 from func.github.fetch import fetch_github_data
 from func.dashboard.pdf_generator.pdf_generator import generate_pdf_using_markdown
 from func.note_handling.pdf_sign import sign_pdf
-from func.note_handling.note_export import process_note_ids, delete_files
+from func.note_handling.note_export import process_bucket_ids, delete_files
 from func.dashboard.crud.note import *
 
 
@@ -52,53 +52,8 @@ async def get_bucket_files(req: Request, download_bucket_info: DonwloadBucketInf
         except ValueError:
             raise_custom_error(422, 210)
 
-    download_bucket_infos = []
-    for bucket_id in bucket_ids:
-        try:
-            bucket_info = {}
-            # 버킷 유효성 검사
-            data, count = supabase.rpc(
-                "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
-            if not data[1]:
-                raise_custom_error(401, 310)
-            # 버킷 내용 읽기
-            note_list = read_note_list(bucket_id)
-            note_ids = [note.get("id") for note in note_list]
-
-            # 노트 작업
-            output_file, media_type, filename, files_to_delete = process_note_ids(
-                note_ids, is_merged_required, is_filename_id)
-
-            # 파일명 변경
-            bucket_title = read_bucket(uuid.UUID(bucket_id)).get("title")
-            if media_type == "application/pdf":
-                new_filename = f"{bucket_title}.pdf"
-            else:
-                new_filename = f"{bucket_title}.zip"
-            new_output_file = f"func/dashboard/pdf_generator/output/{new_filename}"
-            new_files_to_delete = []
-            for file_to_delete in files_to_delete:
-                if file_to_delete.startswith("func/dashboard/pdf_generator/input/"):
-                    new_files_to_delete.append(file_to_delete)
-
-            new_files_to_delete.append(new_output_file)
-
-            os.rename(
-                output_file, new_output_file)
-
-            # 버킷 정보 저장
-            bucket_info["id"] = bucket_id
-            bucket_info["title"] = bucket_title
-            bucket_info["note_ids"] = note_ids
-            bucket_info["output_file"] = new_output_file
-            bucket_info["media_type"] = media_type
-            bucket_info["filename"] = new_filename
-            bucket_info["files_to_delete"] = new_files_to_delete
-
-            download_bucket_infos.append(bucket_info)
-        except Exception as e:
-            print(e)
-            raise_custom_error(500, 312)
+    download_bucket_infos = process_bucket_ids(
+        user, bucket_ids, is_merged_required, is_filename_id)
 
     current_time = datetime.now(
         timezone('Asia/Seoul')).strftime("%Y%m%d_%H%M%S GMT+0900")
@@ -160,7 +115,6 @@ async def get_bucket(req: Request, bucket_id: str):
         "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
     if not data[1]:
         raise_custom_error(401, 310)
-        raise HTTPException(status_code=403, detail="Forbidden")
     res = read_bucket(uuid.UUID(bucket_id))
     return JSONResponse(content={
         "status": "succeed",

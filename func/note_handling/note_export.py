@@ -1,10 +1,12 @@
 import os
 import zipfile
+import uuid
 from datetime import datetime
 from pytz import timezone
 from pdfmerge import pdfmerge
 from func.error.error import raise_custom_error
 from cloud.azure.blob_storage import *
+from func.dashboard.crud.bucket import *
 from func.dashboard.crud.note import *
 
 
@@ -69,3 +71,55 @@ def process_note_ids(note_ids, is_merged_required, is_filename_id):
                         f"func/dashboard/pdf_generator/input/Report_{note_info['title']}.pdf", f"Report_{note_info['title']}.pdf")
         return output_file, 'application/zip', f"Report_{current_time}.zip", [
             f"func/dashboard/pdf_generator/input/Report_{note_info['title']}.pdf" for note_info in download_note_infos] + [output_file]
+
+
+def process_bucket_ids(user, bucket_ids, is_merged_required, is_filename_id):
+    download_bucket_infos = []
+    for bucket_id in bucket_ids:
+        try:
+            bucket_info = {}
+            # 버킷 유효성 검사
+            data, count = supabase.rpc(
+                "verify_bucket", {"user_id": str(user), "bucket_id": bucket_id}).execute()
+            if not data[1]:
+                raise_custom_error(401, 310)
+            # 버킷 내용 읽기 (시간순으로 변경)
+            note_list = read_note_list(bucket_id)
+            note_list.reverse()
+
+            note_ids = [note.get("id") for note in note_list]
+
+            # 노트 작업
+            output_file, media_type, filename, files_to_delete = process_note_ids(
+                note_ids, is_merged_required, is_filename_id)
+
+            # 파일명 변경
+            bucket_title = read_bucket(uuid.UUID(bucket_id)).get("title")
+            if media_type == "application/pdf":
+                new_filename = f"{bucket_title}.pdf"
+            else:
+                new_filename = f"{bucket_title}.zip"
+            new_output_file = f"func/dashboard/pdf_generator/output/{new_filename}"
+            new_files_to_delete = []
+            for file_to_delete in files_to_delete:
+                if file_to_delete.startswith("func/dashboard/pdf_generator/input/"):
+                    new_files_to_delete.append(file_to_delete)
+
+            new_files_to_delete.append(new_output_file)
+
+            os.rename(output_file, new_output_file)
+
+            # 버킷 정보 저장
+            bucket_info["id"] = bucket_id
+            bucket_info["title"] = bucket_title
+            bucket_info["note_ids"] = note_ids
+            bucket_info["output_file"] = new_output_file
+            bucket_info["media_type"] = media_type
+            bucket_info["filename"] = new_filename
+            bucket_info["files_to_delete"] = new_files_to_delete
+
+            download_bucket_infos.append(bucket_info)
+        except Exception as e:
+            print(e)
+            raise_custom_error(500, 312)
+    return download_bucket_infos
