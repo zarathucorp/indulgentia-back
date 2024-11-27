@@ -21,6 +21,7 @@ from func.error.error import raise_custom_error
 from func.user.team import validate_user_in_premium_team
 from func.github.fetch import fetch_github_data
 from func.note_handling.note_export import process_note_ids, delete_files
+from func.user.team import validate_user_is_leader_in_own_team
 
 
 router = APIRouter(
@@ -178,26 +179,28 @@ async def add_note(req: Request,
         "data": res
     })
 
-# update
+
+# 노트 수정 불가
+# # update
 
 
-@ router.put("/{note_id}", tags=["note"])
-async def change_note(req: Request, note: schemas.NoteUpdate):
-    user: UUID4 = verify_user(req)
-    if not user:
-        raise_custom_error(403, 213)
-    if not validate_user_in_premium_team(user):
-        raise_custom_error(401, 820)
-    if not user == note.user_id:
-        raise_custom_error(401, 420)
+# @ router.put("/{note_id}", tags=["note"])
+# async def change_note(req: Request, note: schemas.NoteUpdate):
+#     user: UUID4 = verify_user(req)
+#     if not user:
+#         raise_custom_error(403, 213)
+#     if not validate_user_in_premium_team(user):
+#         raise_custom_error(401, 820)
+#     if not user == note.user_id:
+#         raise_custom_error(401, 420)
 
-    # need verify timestamp logic
+#     # need verify timestamp logic
 
-    res = update_note(note)
-    return JSONResponse(content={
-        "status": "succeed",
-        "data": res
-    })
+#     res = update_note(note)
+#     return JSONResponse(content={
+#         "status": "succeed",
+#         "data": res
+#     })
 
 # delete
 
@@ -211,8 +214,13 @@ async def drop_note(req: Request, note_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
-    if not validate_user_in_premium_team(user):
-        raise_custom_error(401, 820)
+    # if not validate_user_in_premium_team(user):
+    #     raise_custom_error(401, 820)
+
+    # 팀 리더인지 확인
+    if not validate_user_is_leader_in_own_team(user):
+        raise_custom_error(401, 520)
+
     data, count = supabase.table("note").select(
         "user_id").eq("id", note_id).execute()
     if not data[1]:
