@@ -128,3 +128,10 @@ def validate_user_in_premium_team(user_id: UUID4):
     except Exception as e:
         print(e)
         raise_custom_error(500, 230)
+
+
+def validate_user_is_leader_in_own_team(user_id: UUID4):
+    team_id = get_user_team(user_id)
+    if not team_id:
+        raise_custom_error(401, 540)
+    return validate_user_is_leader(user_id, team_id)

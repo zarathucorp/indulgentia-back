@@ -174,15 +174,20 @@ async def change_project(req: Request, project: schemas.ProjectUpdate):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
-    if not validate_user_in_premium_team(user):
-        raise_custom_error(401, 820)
+    # if not validate_user_in_premium_team(user):
+    #     raise_custom_error(401, 820)
+
+    # 팀 리더인지 확인
+    if not validate_user_is_leader_in_own_team(user):
+        raise_custom_error(401, 520)
+
     data, count = supabase.rpc("verify_project", {
                                "user_id": str(user), "project_id": str(project.id)}).execute()
     if not data[1]:
         raise_custom_error(401, 210)
     team_id = uuid.UUID(get_user_team(user))
-    if not validate_user_is_leader(user, team_id):
-        raise_custom_error(401, 520)
+    # if not validate_user_is_leader(user, team_id):
+    #     raise_custom_error(401, 520)
 
     res = update_project(project)
     return JSONResponse(content={
@@ -202,15 +207,20 @@ async def drop_project(req: Request, project_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
-    if not validate_user_in_premium_team(user):
-        raise_custom_error(401, 820)
+    # if not validate_user_in_premium_team(user):
+    #     raise_custom_error(401, 820)
+
+    # 팀 리더인지 확인
+    if not validate_user_is_leader_in_own_team(user):
+        raise_custom_error(401, 520)
+
     data, count = supabase.rpc(
         "verify_project", {"user_id": str(user), "project_id": project_id}).execute()
     if not data[1]:
         raise_custom_error(401, 210)
-    team_id = uuid.UUID(get_user_team(user))
-    if not validate_user_is_leader(user, team_id):
-        raise_custom_error(401, 520)
+    # team_id = uuid.UUID(get_user_team(user))
+    # if not validate_user_is_leader(user, team_id):
+    #     raise_custom_error(401, 520)
 
     res = flag_is_deleted_project(project_id)
     return JSONResponse(content={

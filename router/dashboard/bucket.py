@@ -20,6 +20,7 @@ from func.dashboard.pdf_generator.pdf_generator import generate_pdf_using_markdo
 from func.note_handling.pdf_sign import sign_pdf
 from func.note_handling.note_export import process_bucket_ids, delete_files
 from func.dashboard.crud.note import *
+from func.user.team import validate_user_is_leader_in_own_team
 
 
 router = APIRouter(
@@ -150,10 +151,15 @@ async def change_bucket(req: Request, bucket: schemas.BucketUpdate):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
-    if not validate_user_in_premium_team(user):
-        raise_custom_error(401, 820)
+    # if not validate_user_in_premium_team(user):
+    #     raise_custom_error(401, 820)
     # if not user == bucket.manager_id:
         # raise_custom_error(401, 320)
+
+    # 팀 리더인지 확인
+    if not validate_user_is_leader_in_own_team(user):
+        raise_custom_error(401, 520)
+
     res = update_bucket(bucket)
     return JSONResponse(content={
         "status": "succeed",
@@ -172,8 +178,13 @@ async def drop_bucket(req: Request, bucket_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
-    if not validate_user_in_premium_team(user):
-        raise_custom_error(401, 820)
+    # if not validate_user_in_premium_team(user):
+    #     raise_custom_error(401, 820)
+
+    # 팀 리더인지 확인
+    if not validate_user_is_leader_in_own_team(user):
+        raise_custom_error(401, 520)
+
     data, count = supabase.table("bucket").select(
         "manager_id").eq("id", bucket_id).execute()
     if not data[1]:
