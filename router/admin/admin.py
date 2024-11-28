@@ -22,6 +22,62 @@ router = APIRouter(
 )
 
 
+@router.get("/team/list", tags=["admin"])
+def list_team(req: Request):
+    admin_user: UUID4 = verify_user(req)
+    if not admin_user:
+        raise_custom_error(403, 213)
+    admin_user_data, count = supabase.table("user_setting").select(
+        "*").eq("is_deleted", False).eq("id", admin_user).execute()
+    if admin_user_data[1][0]["is_admin"] == False:
+        raise_custom_error(403, 200)
+    team_data, count = supabase.table("team").select(
+        "*").eq("is_deleted", False).order("created_at", desc=False).execute()
+
+    return JSONResponse(content={
+        "status": "succeed",
+        "teams": team_data[1],
+    })
+
+
+@router.get("/team/{team_id}", tags=["admin"])
+def get_team(req: Request, team_id: UUID4):
+    admin_user: UUID4 = verify_user(req)
+    if not admin_user:
+        raise_custom_error(403, 213)
+    admin_user_data, count = supabase.table("user_setting").select(
+        "*").eq("is_deleted", False).eq("id", admin_user).execute()
+    if admin_user_data[1][0]["is_admin"] == False:
+        raise_custom_error(403, 200)
+    team_user_data, count = supabase.table("user_setting").select(
+        "*").eq("team_id", team_id).eq("is_deleted", False).execute()
+    if not team_user_data:
+        raise_custom_error(401, 110)
+
+    return JSONResponse(content={
+        "status": "succeed",
+        "users": team_user_data[1],
+    })
+
+
+@router.get("/team/{team_id}/note/list", tags=["admin"])
+def get_team_note_list(req: Request, team_id: UUID4):
+    admin_user: UUID4 = verify_user(req)
+    if not admin_user:
+        raise_custom_error(403, 213)
+    admin_user_data, count = supabase.table("user_setting").select(
+        "*").eq("is_deleted", False).eq("id", admin_user).execute()
+    if admin_user_data[1][0]["is_admin"] == False:
+        raise_custom_error(403, 200)
+    team_note_data, count = supabase.table("note").select(
+        "*").eq("team_id", team_id).eq("is_deleted", False).execute()
+
+    return JSONResponse(content={
+        "status": "succeed",
+        "notes": team_note_data[1],
+    })
+
+
 class AdminBase(BaseModel):
     email: str
 
@@ -218,4 +274,22 @@ def send_reset_password(req: Request, user: AdminBase):
     return JSONResponse(content={
         "status": "succeed",
         "email": user.email,
+    })
+
+
+@router.get("/note/list", tags=["admin"])
+def list_note(req: Request):
+    admin_user: UUID4 = verify_user(req)
+    if not admin_user:
+        raise_custom_error(403, 213)
+    admin_user_data, count = supabase.table("user_setting").select(
+        "*").eq("is_deleted", False).eq("id", admin_user).execute()
+    if admin_user_data[1][0]["is_admin"] == False:
+        raise_custom_error(403, 200)
+    note_data, count = supabase.table("note").select(
+        "*").eq("is_deleted", False).execute()
+
+    return JSONResponse(content={
+        "status": "succeed",
+        "notes": note_data[1],
     })
