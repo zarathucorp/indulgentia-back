@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from typing import Annotated, List
 from pydantic import BaseModel
 import jwt
+import uuid
 
 from database.schemas import *
 from database.supabase import supabase
@@ -156,8 +157,30 @@ def list_user(req: Request):
     })
 
 
+@router.get("/list/no-team", tags=["admin-user"])
+def list_user_with_no_team(req: Request):
+    admin_user: UUID4 = verify_user(req)
+    if not admin_user:
+        raise_custom_error(403, 213)
+    admin_user_data, count = supabase.table("user_setting").select(
+        "*").eq("is_deleted", False).eq("id", admin_user).execute()
+    if admin_user_data[1][0]["is_admin"] == False:
+        raise_custom_error(403, 200)
+    user_data, count = supabase.table("user_setting").select(
+        "*").is_("team_id", "null").eq("is_deleted", False).execute()
+
+    return JSONResponse(content={
+        "status": "succeed",
+        "users": user_data[1],
+    })
+
+
 @router.get("/{user_id}", tags=["admin-user"])
-def get_user(req: Request, user_id: UUID4):
+def get_user(req: Request, user_id: str):
+    try:
+        uuid.UUID(user_id)
+    except ValueError:
+        raise_custom_error(422, 210)
     admin_user: UUID4 = verify_user(req)
     if not admin_user:
         raise_custom_error(403, 213)
@@ -176,8 +199,12 @@ def get_user(req: Request, user_id: UUID4):
     })
 
 
-@router.post("/set-admin", tags=["admin-user"])
-def set_admin(req: Request, user: AdminSetAdmin):
+@router.post("/{user_id}/set-admin", tags=["admin-user"])
+def set_admin(req: Request, user_id: str, user: AdminSetAdmin):
+    try:
+        uuid.UUID(user_id)
+    except ValueError:
+        raise_custom_error(422, 210)
     admin_user: UUID4 = verify_user(req)
     if not admin_user:
         raise_custom_error(403, 213)
@@ -191,7 +218,7 @@ def set_admin(req: Request, user: AdminSetAdmin):
         raise_custom_error(401, 110)
 
     user_data, count = supabase.table("user_setting").update({"is_admin": user.is_admin}).eq(
-        "id", user_data[1][0]["id"]).eq("is_deleted", False).execute()
+        "id", user_id).eq("is_deleted", False).execute()
 
     return JSONResponse(content={
         "status": "succeed",
@@ -201,7 +228,6 @@ def set_admin(req: Request, user: AdminSetAdmin):
 
 @router.post("/send-reset-password-email", tags=["admin-user"])
 def send_reset_password(req: Request, user: AdminBase):
-
     admin_user: UUID4 = verify_user(req)
     if not admin_user:
         raise_custom_error(403, 213)
@@ -221,4 +247,34 @@ def send_reset_password(req: Request, user: AdminBase):
     return JSONResponse(content={
         "status": "succeed",
         "email": user.email,
+    })
+
+
+@router.post("/{user_id}/create-team", tags=["admin-user"])
+def create_team(req: Request, user_id: str):
+    try:
+        uuid.UUID(user_id)
+    except ValueError:
+        raise_custom_error(422, 210)
+    admin_user: UUID4 = verify_user(req)
+    if not admin_user:
+        raise_custom_error(403, 213)
+    admin_user_data, count = supabase.table("user_setting").select(
+        "*").eq("is_deleted", False).eq("id", admin_user).execute()
+    if admin_user_data[1][0]["is_admin"] == False:
+        raise_custom_error(403, 200)
+    # 임시 팀 생성
+    team_data, count = supabase.table("team").insert(
+        {"name": "연구실록 임시 팀", "team_leader_id": user_id}).execute()
+
+    # 임시 팀 소속으로 변경
+    team_id = team_data[1][0].get("id")
+    user_data, count = supabase.table("user_setting").update(
+        {"team_id": team_id}).eq("id", user_id).execute()
+    if not user_data[1]:
+        raise_custom_error(500, 220)
+
+    return JSONResponse(content={
+        "status": "succeed",
+        "data": {"team": team_data[1][0], "user": user_data[1][0]}
     })
