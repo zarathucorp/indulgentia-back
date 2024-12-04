@@ -95,6 +95,17 @@ async def add_note(req: Request,
                    files: List[Union[UploadFile, None]] = File(None),
                    description: Optional[str] = Form(None)
                    ):
+    # description 유효성 검사
+    if description:
+        # \r 문자를 제거하고 빈 문자열을 필터링
+        description_lines = list(
+            filter(None, description.replace("\r", "").split("\n")))
+        print(description_lines)
+        if len(description) > 1000 or len(description_lines) > 20:
+            print("description length :", len(description))
+            print("description line count :", description.count("\n"))
+            raise_custom_error(422, 250)
+
     user: UUID4 = verify_user(req)
     note_id = uuid.uuid4()
     if not user:
@@ -135,6 +146,8 @@ async def add_note(req: Request,
                                  note_id=str(note_id), description=description, files=files, contents=contents, project_title=breadcrumb_data[1][0].get("project_title"), bucket_title=breadcrumb_data[1][0].get("bucket_title"), signature_url=url)
     await sign_pdf(pdf_res)
     signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id}_signed.pdf"
+    # # 테스트
+    # raise Exception("test")
     try:
         # upload pdf
         with open(signed_pdf_res, "rb") as f:

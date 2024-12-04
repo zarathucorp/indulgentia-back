@@ -152,6 +152,7 @@ def raise_custom_error(status_code: int, additional_code: int):
             "430": "Image PDF Generation error using Pillow",
             "440": "PDF merge error using pdfmerge",
             "450": "PDF sign error using pyHanko",
+            "460": "Document PDF Generation error using md2pdf",
 
             "500": "Payment error",
             "510": "Tosspayments API error",
