@@ -146,8 +146,8 @@ async def add_note(req: Request,
                                  note_id=str(note_id), description=description, files=files, contents=contents, project_title=breadcrumb_data[1][0].get("project_title"), bucket_title=breadcrumb_data[1][0].get("bucket_title"), signature_url=url)
     await sign_pdf(pdf_res)
     signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id}_signed.pdf"
-    # # 테스트
-    # raise Exception("test")
+    # 테스트
+    raise Exception("test")
     try:
         # upload pdf
         with open(signed_pdf_res, "rb") as f:
