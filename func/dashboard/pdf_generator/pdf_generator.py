@@ -206,7 +206,7 @@ def create_intro_page(title: str, author: str, description: str | None, SOURCE_P
 
         if description:
             html_intro = markdown(
-                description, extensions=['fenced_code', 'markdown.extensions.tables'])
+                description, extras=['fenced_code', 'markdown.extensions.tables'])
             # <hr /> 태그를 수평선으로 변환하기 위해 리스트로 변환
             html_intro = re.sub(r"<hr\s*/?>", "<hr>", html_intro)
             print("html_intro", html_intro)
@@ -466,7 +466,7 @@ async def generate_pdf_using_markdown(note_id: str, markdown_content: str, proje
         pdf.set_font("Pretendard", size=16)
 
         html_intro = markdown(
-            markdown_content_sections[0], extensions=['fenced_code'])
+            markdown_content_sections[0], extras=['fenced_code'])
         # pdf.multi_cell(w=200, text=markdown_content, markdown=True)
         pdf.write_html(html_intro, tag_styles={
             "h1": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=24),
@@ -553,7 +553,7 @@ async def generate_pdf_using_markdown(note_id: str, markdown_content: str, proje
                 pdf.add_page()
                 pdf.set_text_color(0, 0, 0)
                 pdf.set_font_size(16)
-                html_section = markdown(section, extensions=['fenced_code'])
+                html_section = markdown(section, extras=['fenced-code-blocks'])
                 pdf.write_html(html_section, tag_styles={
                     "h1": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=24),
                     "h2": FontFace(family="PretendardB", color=(0, 0, 0), size_pt=20),
@@ -574,3 +574,30 @@ async def generate_pdf_using_markdown(note_id: str, markdown_content: str, proje
         raise_custom_error(500, 110)
 
     return f"{SOURCE_PATH}/output/{note_id}"
+
+
+async def generate_preview_pdf(note_id: str):
+    import PyPDF2
+    SOURCE_PATH = "func/dashboard/pdf_generator"
+
+    ORIGINAL_PATH = f"{note_id}.pdf"
+    WATERMARK_PATH = f"{SOURCE_PATH}/watermark.pdf"
+    RESULT_PATH = f"{note_id}_preview.pdf"
+
+    try:
+        with open(ORIGINAL_PATH, "rb") as original_pdf, open(WATERMARK_PATH, "rb") as watermark_pdf, open(RESULT_PATH, "wb") as result_pdf:
+            original = PyPDF2.PdfFileReader(original_pdf)
+            watermark = PyPDF2.PdfFileReader(watermark_pdf)
+            writer = PyPDF2.PdfFileWriter()
+
+            for i in range(original.getNumPages()):
+                page = original.getPage(i)
+                page.merge_page(watermark.getPage(0))
+                writer.addPage(page)
+
+            writer.write(result_pdf)
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 450)
+
+    return RESULT_PATH
