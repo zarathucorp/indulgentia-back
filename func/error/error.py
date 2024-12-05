@@ -131,6 +131,7 @@ def raise_custom_error(status_code: int, additional_code: int):
             "230": "Supabase select error",
             "231": "Supabase single select error",
             "232": "Supabase multiple select error",
+            "233": "Supabase single select exist error",
             "240": "Supabase delete error",
             "241": "Supabase hard delete error",
             "242": "Supabase soft delete error",
