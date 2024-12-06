@@ -166,7 +166,7 @@ pyrightconfig.json
 # test dummy files
 *.png
 *.jpg
-*.pdf
+# *.pdf
 *.docx
 *.pptx
 *.hwpx
