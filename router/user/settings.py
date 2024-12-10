@@ -150,7 +150,7 @@ def get_user_info(req: Request):
     if not user:
         raise_custom_error(403, 213)
     data, count = supabase.table("user_setting").select(
-        "id", "first_name", "last_name", "email", "is_admin").eq("is_deleted", False).eq("id", user).execute()
+        "id", "team_id", "first_name", "last_name", "email", "is_admin").eq("is_deleted", False).eq("id", user).execute()
     if not data[1]:
         raise_custom_error(500, 231)
     is_leader = validate_user_is_leader_in_own_team(user)
