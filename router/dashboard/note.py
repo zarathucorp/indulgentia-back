@@ -362,6 +362,10 @@ async def drop_note(req: Request, note_id: str):
 
 @ router.get("/file/{note_id}", tags=["note"])
 async def get_note_file(req: Request, note_id: str):
+    try:
+        uuid.UUID(note_id)
+    except ValueError:
+        raise_custom_error(422, 210)
     # Auth 먼저 해야함
     user: UUID4 = verify_user(req)
     if not user:
@@ -412,7 +416,7 @@ async def get_note_files(req: Request, download_note_info: DonwloadNoteInfo, bac
 
 
 @ router.get("/{note_id}/breadcrumb", tags=["note"])
-async def get_breadcrumb(req: Request, note_id: str):
+async def get_note_breadcrumb(req: Request, note_id: str):
     try:
         uuid.UUID(note_id)
     except ValueError:

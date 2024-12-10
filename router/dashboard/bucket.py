@@ -219,7 +219,7 @@ async def drop_bucket(req: Request, bucket_id: str):
 
 
 @router.get("/{bucket_id}/breadcrumb", tags=["bucket"])
-async def get_breadcrumb(req: Request, bucket_id: str):
+async def get_bucket_breadcrumb(req: Request, bucket_id: str):
     try:
         uuid.UUID(bucket_id)
     except ValueError:
