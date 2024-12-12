@@ -1,4 +1,4 @@
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, UUID4, Field
 from typing import List, Union, Optional, Any, Literal
 from datetime import datetime, date
 
@@ -180,13 +180,15 @@ class Note(NoteBase):
 
 
 class OrderBase(BaseModel):
-    status: Literal["READY", "IN_PROGRESS", "WAITING_FOR_DEPOSIT", "DONE", "CANCELED", "PARTIAL_CANCELED", "ABORTED", "EXPIRED"]
+    status: Literal["READY", "IN_PROGRESS", "WAITING_FOR_DEPOSIT",
+                    "DONE", "CANCELED", "PARTIAL_CANCELED", "ABORTED", "EXPIRED"]
     payment_key: str | None = None
     purchase_datetime: datetime | None = None
     is_canceled: bool = False
     total_amount: int
     purchase_user_id: UUID4
-    payment_method: Literal["카드", "가상계좌", "간편결제", "휴대폰", "계좌이체", "문화상품권", "도서문화상품권", "게임문화상품권"] | None = None
+    payment_method: Literal["카드", "가상계좌", "간편결제", "휴대폰",
+                            "계좌이체", "문화상품권", "도서문화상품권", "게임문화상품권"] | None = None
     currency: str | None = None
 
 
@@ -211,7 +213,8 @@ class Order(OrderBase):
         if self.id is None:
             result.pop("id")
         return result
-    
+
+
 class OrderWebhook(BaseModel):
     order_no: str
     status: str | None = None
@@ -223,13 +226,12 @@ class OrderWebhook(BaseModel):
     notes: str | None = None
 
 
-
 class CreateSignature(BaseModel):
     file: str
 
 
 class TeamBase(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1)
 
 
 class TeamCreate(TeamBase):
