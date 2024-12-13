@@ -58,6 +58,9 @@ def get_user_team_req(req: Request):
         data, count = supabase.rpc("get_team_info", {
             "u_team_id": str(user_team_id)}).execute()
         res = data[1][0]
+
+    is_premium = validate_user_in_premium_team(user)
+    res["is_premium"] = is_premium
     return JSONResponse(content={
         "status": "succeed",
         "data": res
