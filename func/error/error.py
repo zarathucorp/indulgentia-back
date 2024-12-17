@@ -131,6 +131,7 @@ def raise_custom_error(status_code: int, additional_code: int):
             "230": "Supabase select error",
             "231": "Supabase single select error",
             "232": "Supabase multiple select error",
+            "233": "Supabase single select exist error",
             "240": "Supabase delete error",
             "241": "Supabase hard delete error",
             "242": "Supabase soft delete error",
@@ -152,6 +153,7 @@ def raise_custom_error(status_code: int, additional_code: int):
             "430": "Image PDF Generation error using Pillow",
             "440": "PDF merge error using pdfmerge",
             "450": "PDF sign error using pyHanko",
+            "460": "Document PDF Generation error using md2pdf",
 
             "500": "Payment error",
             "510": "Tosspayments API error",

@@ -1,25 +1,28 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Form
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile, Form, BackgroundTasks
+from fastapi.responses import JSONResponse, FileResponse
 from pydantic import UUID4
 from typing import Optional, List, Union, Annotated, Literal
 import os
 import uuid
 import hashlib
-import asyncio
+from pdfmerge import pdfmerge
 from datetime import datetime
 from pytz import timezone
+from urllib.parse import quote
 
 from cloud.azure.blob_storage import *
 from database import schemas
 from func.dashboard.crud.note import *
 from func.auth.auth import *
-from func.dashboard.pdf_generator.pdf_generator import generate_pdf, generate_pdf_using_markdown
+from func.dashboard.pdf_generator.pdf_generator import generate_pdf, generate_pdf_using_markdown, generate_preview_pdf
 from func.note_handling.pdf_sign import sign_pdf
 from func.note_handling.pdf_verify import verify_pdf
 from cloud.azure.confidential_lendger import write_ledger, read_ledger, get_ledger_receipt
 from func.error.error import raise_custom_error
 from func.user.team import validate_user_in_premium_team
 from func.github.fetch import fetch_github_data
+from func.note_handling.note_export import process_note_ids, delete_files
+from func.user.team import validate_user_is_leader_in_own_team
 
 
 router = APIRouter(
@@ -80,19 +83,30 @@ async def get_note(req: Request, note_id: str):
     })
 
 
-# create
-
+# note preview
 @router.post("", include_in_schema=False)
 @router.post("/", tags=["note"])
 # file: Optional[UploadFile] = File(None)
-async def add_note(req: Request,
-                   bucket_id: UUID4 = Form(...),
-                   title: str = Form(...),
-                   file_name: str = Form(...),
-                   is_github: bool = Form(...),
-                   files: List[Union[UploadFile, None]] = File(None),
-                   description: Optional[str] = Form(None)
-                   ):
+async def get_note_preview(req: Request,
+                           background_tasks: BackgroundTasks,
+                           bucket_id: UUID4 = Form(...),
+                           title: str = Form(...),
+                           file_name: str = Form(...),
+                           is_github: bool = Form(...),
+                           files: List[Union[UploadFile, None]] = File(None),
+                           description: Optional[str] = Form(None),
+                           ):
+    # description 유효성 검사
+    if description:
+        # \r 문자를 제거하고 빈 문자열을 필터링
+        description_lines = list(
+            filter(None, description.replace("\r", "").split("\n")))
+        print(description_lines)
+        if len(description) > 1000 or len(description_lines) > 20:
+            print("description length :", len(description))
+            print("description line count :", description.count("\n"))
+            raise_custom_error(422, 250)
+
     user: UUID4 = verify_user(req)
     note_id = uuid.uuid4()
     if not user:
@@ -131,8 +145,68 @@ async def add_note(req: Request,
         raise_custom_error(500, 250)
     pdf_res = await generate_pdf(title=title, username=username,
                                  note_id=str(note_id), description=description, files=files, contents=contents, project_title=breadcrumb_data[1][0].get("project_title"), bucket_title=breadcrumb_data[1][0].get("bucket_title"), signature_url=url)
+
+    # pdf_preview = f"func/dashboard/pdf_generator/output/{note_id}_preview.pdf"
+    pdf_preview = await generate_preview_pdf(pdf_res)
+
+    # 작업 후 파일 삭제
+    background_tasks.add_task(delete_files, [pdf_preview])
+
+    return FileResponse(pdf_preview, media_type="application/pdf", filename=f"{note_id}_preview.pdf", headers={
+        "x-note-id": str(note_id)
+    })
+
+
+# create accept
+
+
+# @router.post("", include_in_schema=False)
+@router.post("/{note_id}/accept", tags=["note"])
+async def add_note(req: Request,
+                   note_id: str,
+                   bucket_id: UUID4 = Form(...),
+                   title: str = Form(...),
+                   file_name: str = Form(...),
+                   is_github: bool = Form(...),
+                   description: Optional[str] = Form(None)
+                   ):
+    try:
+        uuid.UUID(note_id)
+    except ValueError:
+        raise_custom_error(422, 210)
+    # description 유효성 검사
+    if description:
+        # \r 문자를 제거하고 빈 문자열을 필터링
+        description_lines = list(
+            filter(None, description.replace("\r", "").split("\n")))
+        print(description_lines)
+        if len(description) > 1000 or len(description_lines) > 20:
+            print("description length :", len(description))
+            print("description line count :", description.count("\n"))
+            raise_custom_error(422, 250)
+    verify_note, count = supabase.table(
+        "note").select("*").eq("id", note_id).execute()
+    # 이미 존재하는 노트
+    if verify_note[1]:
+        raise_custom_error(500, 233)
+
+    user: UUID4 = verify_user(req)
+    # note_id = uuid.uuid4()
+    if not user:
+        raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
+    verify_bucket_data, count = supabase.rpc(
+        "verify_bucket", {"user_id": str(user), "bucket_id": str(bucket_id)}).execute()
+    if not verify_bucket_data[1]:
+        raise_custom_error(401, 310)
+
+    SOURCE_PATH = "func/dashboard/pdf_generator"
+    pdf_res = f"{SOURCE_PATH}/output/{note_id}"
     await sign_pdf(pdf_res)
     signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id}_signed.pdf"
+    # # 테스트
+    # raise Exception("test")
     try:
         # upload pdf
         with open(signed_pdf_res, "rb") as f:
@@ -140,7 +214,6 @@ async def add_note(req: Request,
     except Exception as e:
         print(e)
         # delete result pdf
-        SOURCE_PATH = "func/dashboard/pdf_generator"
         if os.path.isfile(f"{SOURCE_PATH}/output/{note_id}.pdf"):
             os.unlink(f"{SOURCE_PATH}/output/{note_id}.pdf")
             print(f"{SOURCE_PATH}/output/{note_id}.pdf deleted")
@@ -152,7 +225,6 @@ async def add_note(req: Request,
     transaction_id = ledger_result.get("transactionId")
     try:
         # delete result pdf
-        SOURCE_PATH = "func/dashboard/pdf_generator"
         os.unlink(f"{SOURCE_PATH}/output/{note_id}.pdf")
         print(f"{SOURCE_PATH}/output/{note_id}.pdf deleted")
         os.unlink(f"{SOURCE_PATH}/output/{note_id}_signed.pdf")
@@ -162,7 +234,7 @@ async def add_note(req: Request,
         raise_custom_error(500, 130)
 
     note = schemas.NoteCreate(
-        id=note_id,
+        id=uuid.UUID(note_id),
         bucket_id=bucket_id,
         user_id=user,
         title=title,
@@ -177,26 +249,65 @@ async def add_note(req: Request,
         "data": res
     })
 
-# update
+# create reject
 
 
-@ router.put("/{note_id}", tags=["note"])
-async def change_note(req: Request, note: schemas.NoteUpdate):
-    user: UUID4 = verify_user(req)
-    if not user:
-        raise_custom_error(403, 213)
-    if not validate_user_in_premium_team(user):
-        raise_custom_error(401, 820)
-    if not user == note.user_id:
-        raise_custom_error(401, 420)
+@router.post("/{note_id}/reject", tags=["note"])
+async def reject_note(req: Request,
+                      note_id: str,
+                      bucket_id: UUID4 = Form(...),
+                      title: str = Form(...),
+                      file_name: str = Form(...),
+                      is_github: bool = Form(...),
+                      description: Optional[str] = Form(None)
+                      ):
+    try:
+        uuid.UUID(note_id)
+    except ValueError:
+        raise_custom_error(422, 210)
+    verify_note, count = supabase.table(
+        "note").select("*").eq("id", note_id).execute()
+    # 이미 존재하는 노트
+    if verify_note[1]:
+        raise_custom_error(500, 233)
 
-    # need verify timestamp logic
+    try:
+        # delete result pdf
+        SOURCE_PATH = "func/dashboard/pdf_generator"
+        os.unlink(f"{SOURCE_PATH}/output/{note_id}.pdf")
+        print(f"{SOURCE_PATH}/output/{note_id}.pdf deleted")
+    except Exception as e:
+        print(e)
+        raise_custom_error(500, 130)
 
-    res = update_note(note)
     return JSONResponse(content={
         "status": "succeed",
-        "data": res
+        "data": {
+            "message": "Note creation rejected"
+        }
     })
+
+# 노트 수정 불가
+# # update
+
+
+# @ router.put("/{note_id}", tags=["note"])
+# async def change_note(req: Request, note: schemas.NoteUpdate):
+#     user: UUID4 = verify_user(req)
+#     if not user:
+#         raise_custom_error(403, 213)
+#     if not validate_user_in_premium_team(user):
+#         raise_custom_error(401, 820)
+#     if not user == note.user_id:
+#         raise_custom_error(401, 420)
+
+#     # need verify timestamp logic
+
+#     res = update_note(note)
+#     return JSONResponse(content={
+#         "status": "succeed",
+#         "data": res
+#     })
 
 # delete
 
@@ -210,8 +321,13 @@ async def drop_note(req: Request, note_id: str):
     user: UUID4 = verify_user(req)
     if not user:
         raise_custom_error(403, 213)
-    if not validate_user_in_premium_team(user):
-        raise_custom_error(401, 820)
+    # if not validate_user_in_premium_team(user):
+    #     raise_custom_error(401, 820)
+
+    # 팀 리더인지 확인
+    if not validate_user_is_leader_in_own_team(user):
+        raise_custom_error(401, 520)
+
     data, count = supabase.table("note").select(
         "user_id").eq("id", note_id).execute()
     if not data[1]:
@@ -246,6 +362,10 @@ async def drop_note(req: Request, note_id: str):
 
 @ router.get("/file/{note_id}", tags=["note"])
 async def get_note_file(req: Request, note_id: str):
+    try:
+        uuid.UUID(note_id)
+    except ValueError:
+        raise_custom_error(422, 210)
     # Auth 먼저 해야함
     user: UUID4 = verify_user(req)
     if not user:
@@ -262,8 +382,41 @@ async def get_note_file(req: Request, note_id: str):
         # return JSONResponse(status_code=400, content={"status": "failed", "message": str(e)})
 
 
+class DonwloadNoteInfo(BaseModel):
+    note_ids: List[str]
+    is_merged_required: Optional[bool] = False
+    is_filename_id: Optional[bool] = False
+
+
+# pdf multiple download
+@router.post("/file", tags=["note"])
+async def get_note_files(req: Request, download_note_info: DonwloadNoteInfo, background_tasks: BackgroundTasks):
+    user: UUID4 = verify_user(req)
+    note_ids = download_note_info.note_ids
+    is_merged_required = download_note_info.is_merged_required
+    is_filename_id = download_note_info.is_filename_id
+    if not user:
+        raise_custom_error(403, 213)
+    if not validate_user_in_premium_team(user):
+        raise_custom_error(401, 820)
+    for note_id in note_ids:
+        try:
+            uuid.UUID(note_id)
+        except ValueError:
+            raise_custom_error(422, 210)
+
+    # 노트 작업
+    output_file, media_type, filename, files_to_delete = process_note_ids(
+        note_ids, is_merged_required, is_filename_id)
+
+    # 작업 후 파일 삭제
+    background_tasks.add_task(delete_files, files_to_delete)
+
+    return FileResponse(output_file, media_type=media_type, filename=filename)
+
+
 @ router.get("/{note_id}/breadcrumb", tags=["note"])
-async def get_breadcrumb(req: Request, note_id: str):
+async def get_note_breadcrumb(req: Request, note_id: str):
     try:
         uuid.UUID(note_id)
     except ValueError:
@@ -328,17 +481,20 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
         "git_repository", GithubMarkdownRequest.repositoryInfo.name).eq("is_deleted", False).execute()
     if not data[1]:
         raise_custom_error(500, 232)
-
+    # # 테스트 data
+    # data = None, [{"bucket_id": "b1", "user_id": "u1"}]
     res_list = []
     for idx, row in enumerate(data[1]):
         note_id = uuid.uuid4()
         note_id_string = str(note_id)
         user_id = row.get("user_id")
         if not validate_user_in_premium_team(user_id):
-            # break
             raise_custom_error(401, 820)
         user_data, count = supabase.table("user_setting").select(
             "*").eq("is_deleted", False).eq("id", user_id).execute()
+        # # 테스트 user_data
+        # user_data = None, [{"id": "u1", "has_signature": False,
+        #                     "first_name": "first", "last_name": "last"}]
         has_signature = user_data[1][0].get("has_signature")
         if has_signature:
             url = generate_presigned_url(
@@ -349,7 +505,6 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
         last_name = user_data[1][0].get("last_name")
         if not first_name and not last_name:
             raise_custom_error(401, 121)
-            # username = "No Name"
         else:
             username = last_name + " " + first_name
 
@@ -357,11 +512,19 @@ async def add_github_note(req: Request, GithubMarkdownRequest: GithubMarkdownReq
             "bucket_breadcrumb_data", {"bucket_id": row.get("bucket_id")}).execute()
         if not breadcrumb_data[1]:
             raise_custom_error(500, 250)
+        # # 테스트 breadcrumb_data
+        # breadcrumb_data = None, [
+        #     {"project_title": "project", "bucket_title": "bucket"}]
 
         pdf_res = await generate_pdf_using_markdown(note_id=note_id_string, markdown_content=GithubMarkdownRequest.markdownContent, project_title=breadcrumb_data[1][0].get("project_title"), bucket_title=breadcrumb_data[1][0].get("bucket_title"), author=username, signature_url=url)
         await sign_pdf(pdf_res)
         signed_pdf_res = f"func/dashboard/pdf_generator/output/{note_id_string}_signed.pdf"
         SOURCE_PATH = "func/dashboard/pdf_generator"
+        # # 테스트 Response
+        # return JSONResponse(content={
+        #     "status": "succeed",
+        #     "data": res_list
+        # })
         try:
             # upload pdf
             with open(signed_pdf_res, "rb") as f:
@@ -555,9 +718,9 @@ async def add_github_note_all_in_bucket(req: Request, repository_info: Repositor
         pr_markdown += f"- State: {res.get('state')}\n"
         pr_markdown += f"- Created At: {res.get('created_at')}\n"
         if res.get('state') == "closed" and res.get('merged'):
-            pr_markdown += f"- Merged: Yes\n"
+            pr_markdown += f"- Merged: Yes\n\n"
         elif res.get('state') == "closed":
-            pr_markdown += f"- Merged: No\n"
+            pr_markdown += f"- Merged: No\n\n"
     markdown_content = commit_markdown + issue_markdown + pr_markdown
 
     # res_list = []

@@ -9,6 +9,7 @@ from cloud.azure.blob_storage import *
 from env import DEFAULT_AZURE_CONTAINER_NAME
 from database import schemas
 from func.error.error import raise_custom_error
+from func.user.team import validate_user_is_leader_in_own_team
 
 router = APIRouter(
     prefix="/settings",
@@ -149,9 +150,11 @@ def get_user_info(req: Request):
     if not user:
         raise_custom_error(403, 213)
     data, count = supabase.table("user_setting").select(
-        "id", "first_name", "last_name", "email").eq("is_deleted", False).eq("id", user).execute()
+        "id", "team_id", "first_name", "last_name", "email", "is_admin").eq("is_deleted", False).eq("id", user).execute()
     if not data[1]:
         raise_custom_error(500, 231)
+    is_leader = validate_user_is_leader_in_own_team(user)
+    data[1][0]["is_leader"] = is_leader
     return JSONResponse(content={
         "status": "succeed",
         "data": data[1][0]

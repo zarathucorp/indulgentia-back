@@ -1,16 +1,17 @@
-import os
-from database.supabase import supabase
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import Depends, HTTPException, status, Security, APIRouter, Request, Cookie
-from fastapi.responses import JSONResponse
-from typing import Annotated, List
-from pydantic import BaseModel
-
-from database import schemas
-
+from fastapi import APIRouter
+from . import note
+from . import notification
+from . import payment
+from . import team
+from . import user
 
 router = APIRouter(
     prefix="/admin",
     responses={404: {"description": "Not found"}},
 )
 
+router.include_router(note.router)
+router.include_router(notification.router)
+router.include_router(payment.router)
+router.include_router(team.router)
+router.include_router(user.router)
