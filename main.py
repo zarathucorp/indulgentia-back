@@ -1,12 +1,9 @@
 import os
-import time
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import logging
-from typing import Awaitable, Callable
-
 import uvicorn
+from uvicorn.config import LOGGING_CONFIG
 
 from router.auth import auth
 from router.admin import admin
@@ -16,12 +13,12 @@ from router.payment import payment
 from router.validate import validate
 from router.demo import demo
 
+
 load_dotenv(verbose=True)
 
 ROOT_PATH = str(os.getenv("ROOT_PATH"))
 
 app = FastAPI(root_path=ROOT_PATH)
-
 
 origins = [
     "http://localhost",
@@ -40,24 +37,6 @@ app.add_middleware(
     expose_headers=["content-disposition", "x-note-id"],
 )
 
-
-# log 설정
-logger = logging.getLogger(__name__)
-MWCNFunc = Callable[[Request], Awaitable[Response]]
-
-
-@app.middleware("http")
-async def logging_middleware(request: Request, call_next: MWCNFunc) -> Response:
-    start = time.time()
-    response = await call_next(request)
-    duration = (time.time() - start) / 1000
-    source = f"{request.client.host}:{request.client.port}"
-    resource = f"{request.method} {request.url.path}"
-    result = f"{response.status_code} [{duration:.1f}ms]"
-    message = f"{source} => {resource} => {result}"
-    logger.info(message)
-    return response
-
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(dashboard.router)
@@ -66,11 +45,11 @@ app.include_router(payment.router)
 app.include_router(validate.router)
 app.include_router(demo.router)
 
+# Logging configuration
+LOGGING_CONFIG["formatters"]["default"]["fmt"] = "%(asctime)s [%(name)s] %(levelprefix)s %(message)s"
+LOGGING_CONFIG["formatters"]["access"][
+    "fmt"] = '%(asctime)s [%(name)s] %(levelprefix)s %(client_addr)s - "%(request_line)s" %(status_code)s'
 
 if __name__ == "__main__":
-    if (os.getenv("RUNNING_MODE") == "dev"):
-        uvicorn.run("main:app", host="0.0.0.0", port=8000,
-                    reload=True)
-    elif (os.getenv("RUNNING_MODE") == "prod"):
-        uvicorn.run("main:app", host="0.0.0.0", port=8000,
-                    reload=True, log_config='logging.yaml')
+    uvicorn.run("main:app", host="0.0.0.0", port=8000,
+                reload=True)

@@ -1,5 +1,5 @@
 from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions, BlobClient
-from env import AZURE_STORAGE_CONNECTION_STRING, DEFAULT_AZURE_CONTAINER_NAME, LOGS_AZURE_CONTAINER_NAME
+from env import AZURE_STORAGE_CONNECTION_STRING, DEFAULT_AZURE_CONTAINER_NAME
 from datetime import datetime, timedelta
 from pydantic import UUID4
 from func.error.error import raise_custom_error
@@ -73,14 +73,3 @@ def delete_blob(blob_name: str):
     except Exception as e:
         print(e)
         raise_custom_error(500, 313)
-
-
-def upload_logs_blob(data: bytes, blob_name: str):
-    try:
-        blob_client = azure_blob_client.get_blob_client(
-            container=LOGS_AZURE_CONTAINER_NAME, blob=blob_name)
-        blob_client.upload_blob(data, overwrite=True)
-        return True
-    except Exception as e:
-        print(e)
-        raise_custom_error(500, 311)
