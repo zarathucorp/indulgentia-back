@@ -106,8 +106,13 @@ def add_user_in_team(req: Request, team_id: str, user_add_in_team: UsersAddInTea
     })
 
 
+class PaymentPlan(BaseModel):
+    max_members: int = 10
+
+
 @router.post("/{team_id}/add-1year", tags=["admin-team"])
-def add_1year_in_team(req: Request, team_id: str):
+def add_1year_in_team(req: Request, team_id: str, payment_plan: PaymentPlan):
+    max_members = int(payment_plan.max_members)
     try:
         uuid.UUID(team_id)
     except ValueError:
@@ -124,6 +129,7 @@ def add_1year_in_team(req: Request, team_id: str):
     subscription_data, count = supabase.table("subscription").select(
         "*").eq("team_id", team_id).eq("is_active", True).execute()
     if subscription_data[1]:
+        print("subscription_data exist")
         raise_custom_error(500, 231)
 
     # order, subscription 추가
@@ -132,7 +138,7 @@ def add_1year_in_team(req: Request, team_id: str):
     expired_at = started_at + subscription_range - relativedelta(days=1)
     order_no = generate()
     subscription = SubscriptionCreate(team_id=team_id, started_at=started_at,
-                                      expired_at=expired_at, max_members=10, is_active=True, order_no=order_no)
+                                      expired_at=expired_at, max_members=max_members, is_active=True, order_no=order_no)
 
     order_data, count = supabase.table("order").insert(
         {"team_id": team_id, "order_no": order_no, "total_amount": 1000000, "purchase_user_id": admin_user, "status": "DONE", "notes": "어드민 기능 구독"}).execute()
